@@ -1,0 +1,45 @@
+{
+  "name": "sajadbot-whatsapp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Durable, allowlist-only WhatsApp queue worker for a single linked device",
+  "type": "module",
+  "bin": {
+    "sajadbot-wa": "dist/cli/index.js"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "dev": "tsx src/cli/index.ts",
+    "smoke:dry-run": "tsx scripts/smoke-dry-run.ts",
+    "smoke:recovery": "tsx scripts/smoke-recovery.ts",
+    "smoke:retry": "tsx scripts/smoke-retry.ts"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "7.0.0-rc14",
+    "better-sqlite3": "^12.4.1",
+    "commander": "^14.0.1",
+    "dotenv": "^17.2.2",
+    "pino": "^9.6.0",
+    "qrcode-terminal": "^0.12.0",
+    "zod": "^4.1.8"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.35.0",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^22.18.1",
+    "@types/qrcode-terminal": "^0.12.2",
+    "eslint": "^9.35.0",
+    "globals": "^16.3.0",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.42.0",
+    "vitest": "^3.2.4"
+  }
+}

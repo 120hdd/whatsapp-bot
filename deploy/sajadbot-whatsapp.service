@@ -1,0 +1,44 @@
+[Unit]
+Description=SajadBot durable WhatsApp queue worker
+Documentation=file:///opt/sajadbot-whatsapp/README.md
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=sajadbot-wa
+Group=sajadbot-wa
+WorkingDirectory=/var/lib/sajadbot-whatsapp
+Environment=NODE_ENV=production
+ExecStart=/usr/local/bin/sajadbot-wa --config /etc/sajadbot-whatsapp/bot.env start
+Restart=on-failure
+RestartSec=15s
+TimeoutStopSec=45s
+KillSignal=SIGTERM
+UMask=0077
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+LockPersonality=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ReadWritePaths=/var/lib/sajadbot-whatsapp /var/log/sajadbot-whatsapp
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=sajadbot-whatsapp
+
+[Install]
+WantedBy=multi-user.target

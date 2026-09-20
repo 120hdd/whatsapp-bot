@@ -1,0 +1,569 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta name="description" content="راهنمای فارسی نصب، راه‌اندازی، نگهداری و رفع خطای SajadBot WhatsApp در ویندوز و Ubuntu Server">
+  <title>راهنمای راه‌اندازی SajadBot WhatsApp</title>
+  <style>
+    :root {
+      --ink: #18201d;
+      --muted: #59635e;
+      --paper: #f5f2ea;
+      --panel: #fffdf7;
+      --line: #d8d3c7;
+      --accent: #0b6b50;
+      --accent-2: #d97706;
+      --danger: #a33131;
+      --code: #101715;
+      --code-ink: #d8e7df;
+      --shadow: 0 18px 50px rgba(29, 37, 33, .09);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        linear-gradient(90deg, rgba(11, 107, 80, .035) 1px, transparent 1px) 0 0 / 42px 42px,
+        var(--paper);
+      font-family: Tahoma, "Segoe UI", Arial, sans-serif;
+      line-height: 1.95;
+    }
+    a { color: var(--accent); text-underline-offset: 4px; }
+    a:focus-visible, button:focus-visible, input:focus-visible {
+      outline: 3px solid rgba(217, 119, 6, .45);
+      outline-offset: 3px;
+    }
+    code, pre, .mono { font-family: Consolas, "Cascadia Code", monospace; }
+    code {
+      direction: ltr;
+      unicode-bidi: isolate;
+      padding: .1rem .38rem;
+      border: 1px solid #d7d2c6;
+      border-radius: 6px;
+      background: #ece9e1;
+      font-size: .9em;
+    }
+
+    .masthead {
+      position: relative;
+      overflow: hidden;
+      padding: 72px max(24px, calc((100vw - 1240px) / 2)) 60px;
+      color: #f5fbf8;
+      background: #102a22;
+    }
+    .masthead::after {
+      content: "";
+      position: absolute;
+      inset: auto -12% -65% auto;
+      width: 620px;
+      aspect-ratio: 1;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 50%;
+      box-shadow: 0 0 0 72px rgba(255,255,255,.03), 0 0 0 150px rgba(255,255,255,.02);
+    }
+    .eyebrow { color: #88d3b9; font-size: .8rem; letter-spacing: .08em; }
+    h1 { max-width: 840px; margin: 10px 0 16px; font-size: clamp(2.15rem, 5vw, 4.35rem); line-height: 1.25; }
+    .lead { max-width: 820px; margin: 0; color: #cedbd6; font-size: 1.08rem; }
+    .badges { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 28px; }
+    .badge { padding: 6px 12px; border: 1px solid rgba(255,255,255,.2); border-radius: 999px; color: #e6f0ec; font-size: .8rem; }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 285px;
+      gap: 34px;
+      width: min(1240px, calc(100% - 40px));
+      margin: 34px auto 80px;
+      align-items: start;
+    }
+    main { min-width: 0; }
+    nav {
+      position: sticky;
+      top: 20px;
+      order: 2;
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(255,253,247,.92);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+    nav strong { display: block; margin-bottom: 12px; }
+    nav a { display: block; padding: 6px 10px; border-right: 2px solid transparent; color: var(--muted); text-decoration: none; font-size: .88rem; }
+    nav a:hover { border-color: var(--accent-2); color: var(--ink); background: #f4efe5; }
+    #search { width: 100%; margin: 4px 0 14px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--ink); font: inherit; }
+
+    section {
+      margin-bottom: 26px;
+      padding: clamp(22px, 4vw, 38px);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      scroll-margin-top: 20px;
+    }
+    section[hidden] { display: none; }
+    h2 { margin: 0 0 18px; font-size: clamp(1.45rem, 3vw, 2rem); line-height: 1.45; }
+    h3 { margin: 30px 0 10px; font-size: 1.1rem; }
+    p { margin: 10px 0; }
+    ul, ol { padding-right: 1.3rem; }
+    li + li { margin-top: 7px; }
+    .kicker { margin-bottom: 5px; color: var(--accent-2); font-size: .75rem; font-weight: 700; }
+    .note, .warning, .danger {
+      margin: 18px 0;
+      padding: 15px 17px;
+      border-right: 4px solid var(--accent);
+      border-radius: 10px;
+      background: #edf6f1;
+    }
+    .warning { border-color: var(--accent-2); background: #fff4df; }
+    .danger { border-color: var(--danger); background: #fff0ee; }
+    .note strong, .warning strong, .danger strong { display: block; margin-bottom: 3px; }
+
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .mini { padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: #faf8f2; }
+    .mini h3 { margin: 0 0 7px; }
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+      margin: 22px 0;
+      direction: ltr;
+    }
+    .flow span { position: relative; padding: 14px 8px; border: 1px solid #bfcac4; border-radius: 10px; background: #f1f7f4; text-align: center; font: 700 .8rem Consolas, monospace; }
+    .flow span:not(:last-child)::after { content: "←"; position: absolute; right: -14px; z-index: 2; color: var(--accent-2); font-size: 1.2rem; }
+
+    .codebox { position: relative; margin: 14px 0 20px; }
+    pre {
+      overflow: auto;
+      margin: 0;
+      padding: 22px 18px;
+      border: 1px solid #283632;
+      border-radius: 13px;
+      color: var(--code-ink);
+      background: var(--code);
+      direction: ltr;
+      text-align: left;
+      line-height: 1.7;
+      tab-size: 2;
+    }
+    pre code { padding: 0; border: 0; color: inherit; background: transparent; font-size: .83rem; }
+    .copy {
+      position: absolute;
+      top: 9px;
+      right: 9px;
+      padding: 5px 9px;
+      border: 1px solid #42534d;
+      border-radius: 7px;
+      color: #d8e7df;
+      background: #1a2622;
+      cursor: pointer;
+      font: inherit;
+      font-size: .72rem;
+    }
+    .copy:hover { background: #253630; }
+
+    .table-wrap { overflow-x: auto; margin: 16px 0; }
+    table { width: 100%; border-collapse: collapse; min-width: 650px; font-size: .88rem; }
+    th, td { padding: 12px 11px; border-bottom: 1px solid var(--line); text-align: right; vertical-align: top; }
+    th { color: #fff; background: #203d33; }
+    tr:nth-child(even) td { background: #f7f4ec; }
+    td:first-child { direction: ltr; text-align: left; font-family: Consolas, monospace; font-size: .8rem; }
+    .ok { color: var(--accent); font-weight: 700; }
+    .bad { color: var(--danger); font-weight: 700; }
+    details { margin: 10px 0; border: 1px solid var(--line); border-radius: 12px; background: #fbf9f3; }
+    summary { cursor: pointer; padding: 14px 16px; font-weight: 700; }
+    details > div { padding: 0 16px 16px; }
+    .ltr { direction: ltr; text-align: left; unicode-bidi: isolate; }
+    footer { padding: 30px 20px 50px; color: var(--muted); text-align: center; font-size: .85rem; }
+
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+      nav { position: static; order: initial; }
+      .grid { grid-template-columns: 1fr; }
+      .flow { grid-template-columns: 1fr; }
+      .flow span:not(:last-child)::after { content: "↓"; right: 50%; bottom: -20px; top: auto; }
+    }
+    @media (max-width: 520px) {
+      .masthead { padding: 48px 20px 40px; }
+      .layout { width: min(100% - 24px, 1240px); margin-top: 18px; }
+      section { padding: 21px 17px; }
+    }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+    @media print {
+      body { background: #fff; font-size: 11pt; }
+      .masthead { padding: 25px; color: #000; background: #fff; border-bottom: 2px solid #000; }
+      .lead, .eyebrow { color: #333; }
+      .layout { display: block; width: 100%; margin: 0; }
+      nav, .copy { display: none; }
+      section { break-inside: avoid; box-shadow: none; border-color: #aaa; }
+      pre { white-space: pre-wrap; color: #000; background: #f2f2f2; }
+    }
+  </style>
+</head>
+<body>
+  <header class="masthead">
+    <div class="eyebrow">راهنمای عملیاتی • نسخهٔ پروژه 1.0.0</div>
+    <h1>نصب، راه‌اندازی و نگهداری SajadBot WhatsApp</h1>
+    <p class="lead">راهنمای فارسی برای اجرای امن روی ویندوز، استقرار روی Ubuntu Server، شناخت صف و وضعیت‌ها، خواندن لاگ‌های JSON و رفع خطاهای متداول.</p>
+    <div class="badges" aria-label="مشخصات پروژه">
+      <span class="badge">Node.js 20+</span>
+      <span class="badge">TypeScript / ESM</span>
+      <span class="badge">SQLite WAL</span>
+      <span class="badge">Baileys 7.0.0-rc14</span>
+      <span class="badge">تک‌اکانته</span>
+    </div>
+  </header>
+
+  <div class="layout">
+    <main id="content">
+      <section id="intro" data-search="معرفی معماری پروژه واتساپ صف sqlite baileys امنیت">
+        <div class="kicker">پیش از شروع</div>
+        <h2>این پروژه دقیقاً چه کاری انجام می‌دهد؟</h2>
+        <p>SajadBot WhatsApp یک سرویس تک‌اکانته برای ارسال کنترل‌شده به گروه‌های تأییدشده است. درخواست‌ها ابتدا در SQLite ثبت می‌شوند و Worker آن‌ها را با فاصلهٔ امن، retry محدود و گزارش حسابرسی پردازش می‌کند.</p>
+        <div class="danger"><strong>هشدار مهم</strong>Baileys یک کلاینت غیررسمی برای WhatsApp Web است و WhatsApp Business/Cloud API نیست. تغییر پروتکل یا محدودیت حساب ممکن است بدون اطلاع قبلی رخ دهد. پروژه ابزار scraping، دورزدن محدودیت یا ارسال انبوه به افراد ناشناس نیست.</div>
+        <div class="flow" aria-label="جریان پردازش پیام">
+          <span>CLI</span><span>MessageService</span><span>SQLite Queue</span><span>QueueWorker</span><span>WhatsApp</span>
+        </div>
+        <div class="grid">
+          <article class="mini"><h3>ایمنی مقصد</h3><p>هویت مقصد با JID ثابت ذخیره می‌شود. گروه تازه‌کشف‌شده به‌صورت پیش‌فرض غیرفعال است و باید صریحاً <code>allow</code> شود.</p></article>
+          <article class="mini"><h3>تحویل پایدار</h3><p>صف، audit، auth و وضعیت‌ها در SQLite با WAL نگهداری می‌شوند. خاموش‌شدن برنامه باعث حذف jobها نمی‌شود.</p></article>
+          <article class="mini"><h3>جلوگیری از تکرار</h3><p>محتوا، مقصد، زمان‌بندی و هش رسانه مبنای idempotency هستند؛ درخواست مشابه فعال یا تحویل‌شده دوباره ساخته نمی‌شود مگر با <code>--force</code>.</p></article>
+          <article class="mini"><h3>ارسال نامطمئن</h3><p>اگر برنامه وسط حالت <code>PROCESSING</code> متوقف شود، job به <code>REVIEW_REQUIRED</code> می‌رود و خودکار دوباره ارسال نمی‌شود.</p></article>
+        </div>
+      </section>
+
+      <section id="prerequisites" data-search="پیش نیاز node npm git ویندوز ubuntu build tools">
+        <div class="kicker">مرحلهٔ ۱</div>
+        <h2>پیش‌نیازها</h2>
+        <ul>
+          <li>Node.js نسخهٔ 20 یا جدیدتر و npm</li>
+          <li>یک حساب WhatsApp که امکان Linked devices داشته باشد</li>
+          <li>برای استقرار production: Ubuntu دارای systemd</li>
+          <li>در صورت نبود binary آماده برای <code>better-sqlite3</code>: ابزارهای build بومی</li>
+        </ul>
+        <div class="codebox"><pre><code>node --version
+npm --version</code></pre></div>
+        <p>نسخهٔ Node باید با <code>v20</code> یا عددی بالاتر شروع شود. وابستگی Baileys عمداً روی <code>7.0.0-rc14</code> قفل شده است؛ آن را بدون مرور migration/release notes ارتقا ندهید.</p>
+      </section>
+
+      <section id="windows" data-search="ویندوز windows powershell نصب اجرا task scheduler لاگ">
+        <div class="kicker">مرحلهٔ ۲</div>
+        <h2>راه‌اندازی روی ویندوز</h2>
+        <div class="note"><strong>کاربرد پیشنهادی</strong>ویندوز برای توسعه، آزمون و اجرای اپراتوری مناسب است. مسیر رسمی production این مخزن Ubuntu + systemd است.</div>
+        <h3>۱) نصب و بررسی پروژه در PowerShell</h3>
+        <div class="codebox"><pre><code>cd C:\path\to\whatsappBot
+npm ci
+npm run typecheck
+npm run lint
+npm test
+npm run build
+Copy-Item .env.example .env
+npm run dev -- status</code></pre></div>
+        <p>مسیرهای نسبی فایل <code>.env</code> نسبت به پوشه‌ای تفسیر می‌شوند که فرمان را از آن اجرا کرده‌اید. برای جلوگیری از ابهام، همیشه از ریشهٔ پروژه اجرا کنید یا مسیرهای مطلق ویندوزی قرار دهید.</p>
+
+        <h3>۲) ورود به WhatsApp</h3>
+        <div class="codebox"><pre><code># ورود با QR
+npm run dev -- auth login
+
+# یا دریافت pairing code؛ شماره با کد کشور و فقط با رقم
+npm run dev -- auth login --pairing-phone 989121234567
+
+npm run dev -- auth status</code></pre></div>
+        <p>در موبایل از مسیر <span class="ltr">WhatsApp → Linked devices</span>، QR را اسکن کنید. ورود باید در یک ترمینال تعاملی انجام شود؛ آن را داخل اجرای پس‌زمینه انجام ندهید.</p>
+
+        <h3>۳) کشف و اجازه‌دادن به گروه</h3>
+        <div class="codebox"><pre><code>npm run dev -- groups refresh
+npm run dev -- groups list
+npm run dev -- groups alias 120363000000000000@g.us operations
+npm run dev -- groups allow operations</code></pre></div>
+        <div class="warning"><strong>رفتار عمدی</strong><code>groups refresh</code> گروه‌ها را مجاز نمی‌کند. تا اجرای <code>groups allow</code> هیچ پیامی به گروه تازه‌کشف‌شده ارسال نمی‌شود.</div>
+
+        <h3>۴) اجرای Worker</h3>
+        <div class="codebox"><pre><code># اجرای توسعه‌ای در foreground
+npm run dev -- start
+
+# اجرای خروجی buildشده
+node .\dist\cli\index.js --config .\.env start</code></pre></div>
+        <p>پنجرهٔ Worker را باز نگه دارید. فقط یک نمونه می‌تواند با یک <code>LOCK_PATH</code> اجرا شود. برای Task Scheduler ابتدا login را تعاملی انجام دهید، سپس:</p>
+        <ul>
+          <li><b>Program:</b> <code>C:\Program Files\nodejs\node.exe</code></li>
+          <li><b>Arguments:</b> <code>C:\path\to\whatsappBot\dist\cli\index.js --config C:\path\to\whatsappBot\.env start</code></li>
+          <li><b>Start in:</b> <code>C:\path\to\whatsappBot</code></li>
+        </ul>
+        <p>گزینهٔ restart on failure و اجرای «هنگام شروع سیستم» را فقط بعد از موفقیت اجرای دستی فعال کنید. مسیر پروژه و <code>.env</code> را با ACL ویندوز فقط در دسترس حساب سرویس قرار دهید.</p>
+      </section>
+
+      <section id="server" data-search="سرور ubuntu linux systemd install service production استقرار">
+        <div class="kicker">مرحلهٔ ۳</div>
+        <h2>استقرار روی Ubuntu Server</h2>
+        <h3>۱) Build و نصب سرویس</h3>
+        <div class="codebox"><pre><code>git clone &lt;YOUR_REPOSITORY_URL&gt; sajadbot-whatsapp
+cd sajadbot-whatsapp
+npm ci
+npm run typecheck
+npm run lint
+npm test
+npm run build
+sudo bash scripts/install.sh</code></pre></div>
+        <p>Installer کاربر سیستمی <code>sajadbot-wa</code>، مسیرهای امن، فرمان <code>/usr/local/bin/sajadbot-wa</code> و unit مربوط به systemd را می‌سازد و سرویس را enable می‌کند؛ ولی قبل از login آن را start نمی‌کند.</p>
+
+        <h3>۲) پیکربندی، ورود و allowlist</h3>
+        <div class="codebox"><pre><code>sudoedit /etc/sajadbot-whatsapp/bot.env
+sudo -u sajadbot-wa sajadbot-wa --config /etc/sajadbot-whatsapp/bot.env auth login
+sudo -u sajadbot-wa sajadbot-wa --config /etc/sajadbot-whatsapp/bot.env groups refresh
+sudo -u sajadbot-wa sajadbot-wa --config /etc/sajadbot-whatsapp/bot.env groups list
+sudo -u sajadbot-wa sajadbot-wa --config /etc/sajadbot-whatsapp/bot.env groups alias GROUP_JID operations
+sudo -u sajadbot-wa sajadbot-wa --config /etc/sajadbot-whatsapp/bot.env groups allow operations</code></pre></div>
+
+        <h3>۳) شروع و کنترل سرویس</h3>
+        <div class="codebox"><pre><code>sudo systemctl start sajadbot-whatsapp
+sudo systemctl status sajadbot-whatsapp
+sudo systemctl restart sajadbot-whatsapp
+sudo systemctl stop sajadbot-whatsapp
+
+# سلامت برنامه بدون ارسال پیام
+sudo -u sajadbot-wa sajadbot-wa --config /etc/sajadbot-whatsapp/bot.env health</code></pre></div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>مسیر</th><th>کاربرد</th></tr></thead>
+          <tbody>
+            <tr><td>/opt/sajadbot-whatsapp</td><td>کد buildشده و dependencyهای production</td></tr>
+            <tr><td>/etc/sajadbot-whatsapp/bot.env</td><td>پیکربندی root-owned با دسترسی گروه سرویس</td></tr>
+            <tr><td>/var/lib/sajadbot-whatsapp</td><td>دیتابیس، auth، lock و رسانه‌های staged با دسترسی محدود</td></tr>
+            <tr><td>/var/log/sajadbot-whatsapp</td><td>مسیر رزروشده؛ خروجی پیش‌فرض سرویس در journald است</td></tr>
+          </tbody>
+        </table></div>
+        <p>unit پروژه با <code>ProtectSystem=strict</code>، <code>ProtectHome=true</code>، <code>NoNewPrivileges=true</code> و capability خالی اجرا می‌شود. در نبود auth، برنامه با موفقیت خارج می‌شود تا <code>Restart=on-failure</code> طوفان restart نسازد.</p>
+
+        <h3>به‌روزرسانی و حذف</h3>
+        <div class="codebox"><pre><code># بعد از checkout، نصب وابستگی، تست و build نسخهٔ جدید
+sudo bash scripts/upgrade.sh
+
+# حذف برنامه با حفظ state، auth، config و logs
+sudo bash scripts/uninstall.sh
+
+# حذف دائمی همهٔ داده‌های حساس
+sudo bash scripts/uninstall.sh --purge</code></pre></div>
+        <div class="danger"><strong>گزینهٔ مخرب</strong><code>--purge</code> دیتابیس، credentialهای دستگاه لینک‌شده، media، پیکربندی و لاگ‌ها را برای همیشه حذف می‌کند.</div>
+      </section>
+
+      <section id="config" data-search="env تنظیمات config database timezone retry media dry run">
+        <div class="kicker">پیکربندی</div>
+        <h2>متغیرهای محیطی</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>کلید</th><th>پیش‌فرض</th><th>توضیح و محدودیت</th></tr></thead>
+          <tbody>
+            <tr><td>DATABASE_PATH</td><td><code>./data/app.db</code></td><td>صف، audit، cache گروه و auth حساس</td></tr>
+            <tr><td>STATE_DIR</td><td><code>./data</code></td><td>ریشهٔ داده‌های runtime</td></tr>
+            <tr><td>MEDIA_DIR</td><td><code>./data/media</code></td><td>نسخهٔ hashشدهٔ فایل‌های صف</td></tr>
+            <tr><td>LOCK_PATH</td><td><code>./data/daemon.lock</code></td><td>جلوگیری از اجرای هم‌زمان دو daemon</td></tr>
+            <tr><td>LOG_LEVEL</td><td><code>info</code></td><td><code>fatal/error/warn/info/debug/trace/silent</code></td></tr>
+            <tr><td>TIMEZONE</td><td><code>UTC</code></td><td>فقط نمایش CLI؛ ذخیره‌سازی timestampها UTC است</td></tr>
+            <tr><td>DRY_RUN</td><td><code>false</code></td><td>فعال‌سازی pipeline آفلاین بدون socket واتساپ</td></tr>
+            <tr><td>WORKER_POLL_MS</td><td><code>1000</code></td><td>فاصلهٔ بررسی صف؛ حداقل 50ms</td></tr>
+            <tr><td>SEND_INTERVAL_MS</td><td><code>8000</code></td><td>حداقل فاصلهٔ محافظه‌کارانه بین ارسال‌ها</td></tr>
+            <tr><td>MAX_ATTEMPTS</td><td><code>5</code></td><td>سقف تلاش ذخیره‌شده؛ بین 1 تا 100</td></tr>
+            <tr><td>RETRY_BASE_MS</td><td><code>5000</code></td><td>پایهٔ backoff؛ حداقل 100ms</td></tr>
+            <tr><td>RETRY_MAX_MS</td><td><code>300000</code></td><td>سقف backoff و نباید از base کمتر باشد</td></tr>
+            <tr><td>MAX_MEDIA_BYTES</td><td><code>2147483648</code></td><td>سقف اعتبارسنجی اندازهٔ media</td></tr>
+            <tr><td>SELF_CONTROLLER_ENABLED</td><td><code>false</code></td><td>فعال‌سازی فرمان‌های محدود Message Yourself</td></tr>
+            <tr><td>PAIRING_PHONE</td><td>خالی</td><td>شماره با کد کشور برای pairing-code</td></tr>
+          </tbody>
+        </table></div>
+        <div class="warning"><strong>زمان‌بندی</strong>مقدار <code>schedule --at</code> باید حتماً <code>Z</code> یا offset صریح داشته باشد؛ مثال معتبر: <code>2026-09-21T12:30:00+03:30</code>.</div>
+      </section>
+
+      <section id="operations" data-search="فرمان ارسال schedule queue status audit dry run عملیات">
+        <div class="kicker">کار روزمره</div>
+        <h2>فرمان‌های پرکاربرد</h2>
+        <p>در ویندوز/توسعه پیشوند <code>npm run dev --</code> و در سرور پیشوند <code>sudo -u sajadbot-wa sajadbot-wa --config /etc/sajadbot-whatsapp/bot.env</code> را استفاده کنید.</p>
+        <h3>ارسال و زمان‌بندی</h3>
+        <div class="codebox"><pre><code>npm run dev -- send operations --text "Deployment complete"
+npm run dev -- send operations --file .\photo.jpg --caption "Site photo"
+npm run dev -- send operations --file .\report.pdf --caption "Report" --filename report.pdf
+npm run dev -- schedule operations --at "2026-09-21T12:30:00+03:30" --text "Scheduled update"</code></pre></div>
+        <h3>مشاهده و حل وضعیت صف</h3>
+        <div class="codebox"><pre><code>npm run dev -- queue list
+npm run dev -- queue pending
+npm run dev -- queue failed
+npm run dev -- queue review
+npm run dev -- queue show JOB_UUID
+npm run dev -- queue show JOB_UUID --include-content
+npm run dev -- queue retry JOB_UUID
+npm run dev -- queue cancel JOB_UUID
+npm run dev -- queue mark-sent JOB_UUID</code></pre></div>
+        <div class="warning"><strong>REVIEW_REQUIRED را کورکورانه retry نکنید.</strong>ابتدا WhatsApp را بررسی کنید: اگر پیام رسیده <code>mark-sent</code>، اگر قطعاً نرسیده <code>retry</code> و اگر نباید ارسال شود <code>cancel</code>.</div>
+        <h3>آزمون بدون شبکه</h3>
+        <div class="codebox"><pre><code>npm run dev -- groups import-local 120363000000000000@g.us --subject "Dry run" --alias dry-run-test
+npm run dev -- groups allow dry-run-test
+npm run dev -- --dry-run send dry-run-test --text "offline test"
+npm run smoke:dry-run
+npm run smoke:recovery
+npm run smoke:retry</code></pre></div>
+        <p>Dry-run تمام مراحل validation، allowlist، staging، hashing، idempotency، queue، audit و logging را اجرا می‌کند؛ اما socket واتساپ نمی‌سازد و job را با شناسهٔ واضح <code>dryrun:...</code> به وضعیت <code>DRY_RUN</code> می‌برد.</p>
+      </section>
+
+      <section id="logs" data-search="لاگ logs journald pino json audit status health debug">
+        <div class="kicker">مانیتورینگ</div>
+        <h2>لاگ‌ها را چطور بخوانیم؟</h2>
+        <p>لاگ برنامه newline-delimited JSON و مناسب journald است. فیلدهای کلیدی شامل <code>job_id</code>، <code>destination_jid</code>، <code>attempt</code>، <code>error_class</code> و <code>connection_state</code> هستند. فیلدهای شناخته‌شدهٔ credential، key، token و password با <code>[REDACTED]</code> پوشانده می‌شوند و متن پیام در لاگ معمولی نوشته نمی‌شود.</p>
+        <h3>Ubuntu / journald</h3>
+        <div class="codebox"><pre><code># دنبال‌کردن زنده
+sudo journalctl -u sajadbot-whatsapp -f
+
+# از ابتدای امروز، با timestamp دقیق
+sudo journalctl -u sajadbot-whatsapp --since today -o short-iso
+
+# فقط هشدار و خطا
+sudo journalctl -u sajadbot-whatsapp -p warning..alert --since "1 hour ago"
+
+# خروجی JSON برای فیلتر پیشرفته
+sudo journalctl -u sajadbot-whatsapp -o json --since today</code></pre></div>
+        <h3>ویندوز</h3>
+        <div class="codebox"><pre><code># مشاهدهٔ مستقیم در PowerShell
+node .\dist\cli\index.js --config .\.env start
+
+# ذخیرهٔ stdout و stderr در یک فایل عملیاتی
+node .\dist\cli\index.js --config .\.env start *&gt;&gt; .\data\sajadbot.log
+
+# دنبال‌کردن فایل
+Get-Content .\data\sajadbot.log -Wait -Tail 100</code></pre></div>
+        <h3>سه منبع متفاوت اطلاعات</h3>
+        <div class="grid">
+          <article class="mini"><h3><code>status</code></h3><p>نمای کلی auth، اتصال، worker، WAL و تعداد jobها.</p></article>
+          <article class="mini"><h3><code>health</code></h3><p>همان داده‌های عملیاتی با exit code غیرصفر در وضعیت fatal/auth-required، مگر Dry-run.</p></article>
+          <article class="mini"><h3><code>audit --limit 100</code></h3><p>رویدادهای کنترلی پایدار مثل startup، login، تغییر allowlist و تصمیم‌های صف.</p></article>
+          <article class="mini"><h3>لاگ Pino</h3><p>جزئیات لحظه‌ای اتصال، retry، خطا و lifecycle برای عیب‌یابی.</p></article>
+        </div>
+      </section>
+
+      <section id="states" data-search="وضعیت job pending scheduled processing retry failed cancelled review required">
+        <div class="kicker">مدل صف</div>
+        <h2>معنی وضعیت‌های Job</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>وضعیت</th><th>معنی</th><th>اقدام اپراتور</th></tr></thead>
+          <tbody>
+            <tr><td>PENDING</td><td>آمادهٔ پردازش فوری</td><td>معمولاً صبر کنید</td></tr>
+            <tr><td>SCHEDULED</td><td>منتظر رسیدن زمان UTC ثبت‌شده</td><td>زمان و offset را بررسی کنید</td></tr>
+            <tr><td>PROCESSING</td><td>Worker job را claim کرده است</td><td>اگر طولانی ماند، وضعیت daemon را بررسی کنید</td></tr>
+            <tr><td>WAITING_RATE_LIMIT</td><td>واتساپ موقتاً محدود کرده است</td><td>صبر؛ زمان retry ذخیره شده است</td></tr>
+            <tr><td>RETRY</td><td>خطای گذرا و تلاش بعدی زمان‌بندی شده</td><td>شبکه و تعداد attempt را ببینید</td></tr>
+            <tr><td>SENT</td><td>ارسال ثبت و remote ID ذخیره شده</td><td>نیازی نیست</td></tr>
+            <tr><td>FAILED</td><td>خطای دائمی یا پایان بودجهٔ تلاش</td><td>علت را رفع و دستی retry/cancel کنید</td></tr>
+            <tr><td>CANCELLED</td><td>لغو توسط اپراتور یا غیرفعال‌شدن مقصد</td><td>در صورت نیاز job تازه بسازید</td></tr>
+            <tr><td>REVIEW_REQUIRED</td><td>نتیجهٔ ارسال پس از crash نامطمئن است</td><td>WhatsApp را بررسی و یکی از سه تصمیم دستی را ثبت کنید</td></tr>
+            <tr><td>DRY_RUN</td><td>pipeline کامل بدون ارسال واقعی</td><td>نتیجهٔ آزمون است</td></tr>
+          </tbody>
+        </table></div>
+      </section>
+
+      <section id="troubleshooting" data-search="خطا ارور troubleshooting auth logged out sqlite database lock media permission rate limit network configuration">
+        <div class="kicker">رفع اشکال</div>
+        <h2>خطاهای محتمل و راه‌حل</h2>
+        <details open><summary><span class="bad">AUTH_REQUIRED / LOGGED_OUT</span></summary><div><p>credential وجود ندارد یا مجوز Linked device باطل شده است. jobها پاک نمی‌شوند.</p><div class="codebox"><pre><code># سرور
+sudo systemctl stop sajadbot-whatsapp
+sudo -u sajadbot-wa sajadbot-wa --config /etc/sajadbot-whatsapp/bot.env auth login
+sudo systemctl start sajadbot-whatsapp
+
+# ویندوز
+npm run dev -- auth login
+npm run dev -- start</code></pre></div></div></details>
+        <details><summary><span class="bad">REVIEW_REQUIRED / stale_jobs_require_review</span></summary><div><p>برنامه در حالی متوقف شده که job در حال پردازش بوده و نتیجهٔ remote نامشخص است. پیام را در گروه بررسی کنید؛ سپس <code>queue mark-sent</code>، <code>queue retry</code> یا <code>queue cancel</code> را آگاهانه اجرا کنید.</p></div></details>
+        <details><summary>Unknown destination یا گروه در فهرست نیست</summary><div><p>ابتدا <code>groups refresh</code> و بعد <code>groups list</code> را اجرا کنید. برای راحتی alias بسازید و مقصد را صریحاً allow کنید. عضویت حساب در گروه را نیز بررسی کنید.</p></div></details>
+        <details><summary>Disabled / unsendable / PERMISSION_ERROR / DESTINATION_ERROR</summary><div><p>احتمالاً گروه allow نشده، حساب دیگر عضو نیست، محدودیت ارسال دارد یا مقصد حذف شده است. یک خطای دائمی مقصد می‌تواند آن را unsendable کند. عضویت و مجوز را در WhatsApp اصلاح کنید، سپس refresh و بازبینی اپراتوری انجام دهید.</p></div></details>
+        <details><summary>RATE_LIMITED</summary><div><p>job به <code>WAITING_RATE_LIMIT</code> می‌رود و معمولاً پس از حداقل ۶۰ ثانیه یا زمان اعلام‌شده retry می‌شود. daemon را پیاپی restart نکنید و <code>SEND_INTERVAL_MS</code> را بی‌دلیل کاهش ندهید.</p></div></details>
+        <details><summary>TEMPORARY_NETWORK / CONNECTION_CLOSED / whatsapp_reconnect_failed</summary><div><p>شبکه، DNS، proxy/firewall و ساعت سیستم را بررسی کنید. اتصال با backoff نمایی تا <code>RETRY_MAX_MS</code> دوباره برقرار می‌شود. خطاهای <code>ECONNRESET</code>، <code>ETIMEDOUT</code> و وضعیت‌های 408/5xx گذرا طبقه‌بندی می‌شوند.</p></div></details>
+        <details><summary>MEDIA_ERROR یا فایل staged پیدا نمی‌شود</summary><div><p>وجود فایل در <code>MEDIA_DIR</code>، permission و اندازه نسبت به <code>MAX_MEDIA_BYTES</code> را بررسی کنید. Worker عمداً به مسیر اصلی فایل برنمی‌گردد؛ فایل staged را از backup بازیابی یا job را لغو و دوباره ایجاد کنید.</p></div></details>
+        <details><summary>Database locked / Already running</summary><div><p>فقط یک daemon با یک lock مجاز است. در Linux از <code>systemctl status</code> و در ویندوز از Task Manager استفاده کنید. lock را وقتی PID آن هنوز فعال است حذف نکنید. اگر هیچ پردازشی فعال نیست، ابتدا backup بگیرید و سپس lock stale را بررسی کنید.</p></div></details>
+        <details><summary>Invalid configuration / Unknown TIMEZONE</summary><div><p>مقادیر <code>.env</code> با Zod اعتبارسنجی می‌شوند. boolean فقط مقادیری مثل <code>true/false/1/0/yes/no</code> می‌پذیرد؛ <code>RETRY_MAX_MS</code> باید از base کمتر نباشد و timezone باید نام IANA معتبر مثل <code>Asia/Tehran</code> باشد.</p></div></details>
+        <details><summary>زمان‌بندی بدون offset رد می‌شود</summary><div><p><code>2026-09-21T12:30:00</code> مبهم و نامعتبر است. از <code>2026-09-21T12:30:00+03:30</code> یا زمان UTC مانند <code>2026-09-21T09:00:00Z</code> استفاده کنید.</p></div></details>
+        <details><summary>QR نمایش داده نمی‌شود</summary><div><p><code>auth login</code> را مستقیم در ترمینال تعاملی اجرا کنید، نه داخل systemd یا Task Scheduler. اندازهٔ ترمینال را بزرگ کنید. برای مسیر جایگزین از <code>--pairing-phone</code> استفاده کنید.</p></div></details>
+        <details><summary>نصب better-sqlite3 شکست می‌خورد</summary><div><p>نسخهٔ Node و معماری سیستم را بررسی کنید. اگر binary آماده موجود نیست، در Ubuntu ابزارهای build و در Windows ابزارهای C++ Build Tools مورد نیاز است. سپس <code>node_modules</code> ناسازگار را جابه‌جا/حذف و <code>npm ci</code> را دوباره اجرا کنید.</p></div></details>
+        <details><summary>Protocol breakage پس از تغییر Baileys</summary><div><p>dependency پروژه exact-pinned است. ابتدا به lockfile بررسی‌شده برگردید و تست‌های typecheck/lint/test و هر سه smoke test را اجرا کنید. ارتقای RC باید جداگانه و با مرور migration guide انجام شود.</p></div></details>
+      </section>
+
+      <section id="backup" data-search="backup restore پشتیبان بازیابی امنیت auth database wal shm">
+        <div class="kicker">تداوم سرویس</div>
+        <h2>پشتیبان‌گیری، بازیابی و امنیت</h2>
+        <p>برای backup سازگار، سرویس را متوقف کنید یا از مکانیزم online backup خود SQLite استفاده کنید. این سه مورد را با هم نگه دارید:</p>
+        <ul>
+          <li><code>/var/lib/sajadbot-whatsapp/app.db</code> — صف، audit، cache و auth</li>
+          <li><code>/var/lib/sajadbot-whatsapp/media</code> — فایل‌های لازم برای jobهای ارسال‌نشده</li>
+          <li><code>/etc/sajadbot-whatsapp/bot.env</code> — تنظیمات سرویس</li>
+        </ul>
+        <div class="danger"><strong>فقط app.db زنده را کپی نکنید.</strong>هنگام اجرا، فایل‌های <code>-wal</code> و <code>-shm</code> ممکن است state ثبت‌شده داشته باشند. backup شامل auth عملاً امکان دسترسی به حساب را می‌دهد؛ آن را رمزنگاری و access-control کنید.</div>
+        <p>پس از restore در Linux مالکیت را به <code>sajadbot-wa:sajadbot-wa</code> برگردانید و permission فایل‌ها/دایرکتوری‌های حساس را به‌ترتیب <code>0600</code>/<code>0700</code> نگه دارید. سپس ابتدا <code>health</code> و بعد سرویس را start کنید.</p>
+      </section>
+
+      <section id="checklist" data-search="چک لیست نهایی سلامت production امنیت">
+        <div class="kicker">تحویل نهایی</div>
+        <h2>چک‌لیست قبل از ارسال واقعی</h2>
+        <ol>
+          <li><span class="ok">✓</span> نسخهٔ Node حداقل 20 و همهٔ تست‌ها موفق‌اند.</li>
+          <li><span class="ok">✓</span> مسیرهای database، media و lock پایدار و دارای permission محدودند.</li>
+          <li><span class="ok">✓</span> login تعاملی موفق و <code>auth status</code> برابر <code>AVAILABLE</code> است.</li>
+          <li><span class="ok">✓</span> گروه با JID درست refresh، alias و به‌صورت صریح allow شده است.</li>
+          <li><span class="ok">✓</span> سه smoke test و یک ارسال <code>--dry-run</code> موفق‌اند.</li>
+          <li><span class="ok">✓</span> <code>status</code>/<code>health</code> و مسیر مشاهدهٔ لاگ بررسی شده‌اند.</li>
+          <li><span class="ok">✓</span> backup رمزنگاری‌شده و روش restore آزمایش شده است.</li>
+          <li><span class="ok">✓</span> اپراتور فرق <code>FAILED</code> و <code>REVIEW_REQUIRED</code> را می‌داند.</li>
+        </ol>
+      </section>
+    </main>
+
+    <nav aria-label="فهرست راهنما">
+      <strong>فهرست و جست‌وجو</strong>
+      <input id="search" type="search" placeholder="مثلاً AUTH_REQUIRED" aria-label="جست‌وجو در بخش‌ها">
+      <a href="#intro">معرفی پروژه</a>
+      <a href="#prerequisites">پیش‌نیازها</a>
+      <a href="#windows">راه‌اندازی ویندوز</a>
+      <a href="#server">استقرار Ubuntu Server</a>
+      <a href="#config">تنظیمات محیطی</a>
+      <a href="#operations">فرمان‌های عملیاتی</a>
+      <a href="#logs">لاگ و مانیتورینگ</a>
+      <a href="#states">وضعیت‌های صف</a>
+      <a href="#troubleshooting">رفع خطا</a>
+      <a href="#backup">پشتیبان و امنیت</a>
+      <a href="#checklist">چک‌لیست نهایی</a>
+    </nav>
+  </div>
+
+  <footer>این راهنما بر اساس کد، تنظیمات، unit systemd و اسکریپت‌های همین مخزن تهیه شده است.</footer>
+
+  <script>
+    document.querySelectorAll('pre').forEach((pre) => {
+      const box = pre.closest('.codebox');
+      if (!box) return;
+      const button = document.createElement('button');
+      button.className = 'copy';
+      button.type = 'button';
+      button.textContent = 'کپی';
+      button.setAttribute('aria-label', 'کپی کردن فرمان‌ها');
+      button.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(pre.innerText);
+          button.textContent = 'کپی شد';
+          setTimeout(() => { button.textContent = 'کپی'; }, 1400);
+        } catch {
+          button.textContent = 'ناموفق';
+        }
+      });
+      box.appendChild(button);
+    });
+
+    const search = document.querySelector('#search');
+    const sections = [...document.querySelectorAll('main section')];
+    search.addEventListener('input', () => {
+      const query = search.value.trim().toLocaleLowerCase('fa');
+      sections.forEach((section) => {
+        const haystack = `${section.dataset.search || ''} ${section.innerText}`.toLocaleLowerCase('fa');
+        section.hidden = query.length > 0 && !haystack.includes(query);
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,38 @@
+# Normalize text files and keep repository line endings consistent across platforms.
+* text=auto eol=lf
+
+# Source, documentation, configuration, and Linux deployment files.
+*.ts      text eol=lf
+*.js      text eol=lf
+*.json    text eol=lf
+*.md      text eol=lf
+*.html    text eol=lf
+*.css     text eol=lf
+*.yml     text eol=lf
+*.yaml    text eol=lf
+*.sh      text eol=lf
+*.service text eol=lf
+*.env     text eol=lf
+
+# Native Windows command files should retain Windows line endings.
+*.bat     text eol=crlf
+*.cmd     text eol=crlf
+*.ps1     text eol=crlf
+
+# Binary assets and persistent/runtime database formats must not be normalized.
+*.png     binary
+*.jpg     binary
+*.jpeg    binary
+*.gif     binary
+*.webp    binary
+*.ico     binary
+*.pdf     binary
+*.zip     binary
+*.gz      binary
+*.zst     binary
+*.db      binary
+*.sqlite  binary
+*.db-wal  binary
+*.db-shm  binary
+*.sqlite-wal binary
+*.sqlite-shm binary
