@@ -91,7 +91,12 @@ export class ConnectionManager {
     const socket = this.socket;
     this.socket = null;
     this.generation += 1;
-    if (socket) void socket.end(undefined);
+    if (socket) {
+      await socket.end(undefined);
+      // Let already-queued Baileys auth/LID handlers drain before the CLI
+      // closes the SQLite context that backs the auth state.
+      await sleep(100);
+    }
     this.setState('DISCONNECTED');
   }
 
@@ -110,7 +115,7 @@ export class ConnectionManager {
     this.audit.add('auth_logout', { actor: 'cli' });
   }
 
-  private async createSocket(options: ConnectOptions): Promise<void> {
+  private async createSocket(options: ConnectOptions, protocolRestartCount = 0): Promise<void> {
     const generation = ++this.generation;
     this.setState(this.reconnectAttempt > 0 ? 'RECONNECTING' : 'CONNECTING');
     const { state, saveCreds } = await useSQLiteAuthState(this.authRepository);
@@ -151,12 +156,36 @@ export class ConnectionManager {
         }
         if (update.connection === 'close') {
           const status = disconnectStatus(update);
+          const restartRequired = status === DisconnectReason.restartRequired;
           const loggedOut = status === DisconnectReason.loggedOut;
           const fatal =
             status === DisconnectReason.badSession ||
             status === DisconnectReason.multideviceMismatch ||
             status === DisconnectReason.forbidden;
           this.socket = null;
+          if (restartRequired && !settled && !this.stopped && protocolRestartCount < 2) {
+            settled = true;
+            this.setState('RECONNECTING');
+            this.logger.info(
+              { connection_state: 'RECONNECTING', protocol_restart: protocolRestartCount + 1 },
+              'whatsapp_protocol_restart_required',
+            );
+            void (async () => {
+              try {
+                // Pairing mutates the in-memory credentials immediately before WhatsApp
+                // closes the stream with 515. Flush that state before constructing the
+                // replacement socket, even if the final creds.update event is delayed.
+                await saveCreds();
+                await sleep(250);
+                if (this.stopped) throw new Error('WhatsApp connection stopped during protocol restart');
+                await this.createSocket(options, protocolRestartCount + 1);
+                resolve();
+              } catch (error) {
+                reject(error instanceof Error ? error : new Error(String(error)));
+              }
+            })();
+            return;
+          }
           if (loggedOut) {
             this.setState('LOGGED_OUT');
             this.stateRepository.set('outgoing_pause_reason', 'LOGGED_OUT');
@@ -169,7 +198,10 @@ export class ConnectionManager {
             this.setState('DISCONNECTED');
             if (!this.stopped && options.autoReconnect !== false) this.scheduleReconnect();
           }
-          if (!settled) reject(new Error(`WhatsApp connection closed before ready (status ${status ?? 'unknown'})`));
+          if (!settled) {
+            settled = true;
+            reject(new Error(`WhatsApp connection closed before ready (status ${status ?? 'unknown'})`));
+          }
         }
       });
     });

@@ -57,7 +57,14 @@ export class AuthRepository {
     const stored = this.getCredentials();
     if (!stored) return false;
     try {
-      return (JSON.parse(stored) as { registered?: unknown }).registered === true;
+      const credentials = JSON.parse(stored) as {
+        registered?: unknown;
+        me?: unknown;
+        account?: unknown;
+      };
+      // Baileys 7 RC may retain registered=false after a successful protocol
+      // restart even though the paired identity and account are present.
+      return credentials.registered === true || Boolean(credentials.me && credentials.account);
     } catch {
       return false;
     }

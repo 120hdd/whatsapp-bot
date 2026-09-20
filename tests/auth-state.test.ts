@@ -35,6 +35,19 @@ describe('SQLite Baileys auth state', () => {
     expect(test.context.auth.hasCredentials()).toBe(true);
   });
 
+  it('accepts a Baileys 7 paired identity when registered remains false', () => {
+    test = makeTestContext();
+    test.context.auth.saveCredentials(
+      JSON.stringify({
+        registered: false,
+        me: { id: '989121234567:1@s.whatsapp.net' },
+        account: { details: 'present' },
+      }),
+    );
+
+    expect(test.context.auth.hasCredentials()).toBe(true);
+  });
+
   it('rolls back batched key storage on a transaction failure', () => {
     test = makeTestContext();
     expect(() =>
