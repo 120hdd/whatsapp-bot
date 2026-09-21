@@ -13,6 +13,9 @@ import { formatInTimezone, parseSchedule } from '../messaging/scheduler.js';
 import { ConnectionManager } from '../whatsapp/connection-manager.js';
 import { WhatsAppGroupService } from '../whatsapp/group-service.js';
 import { isGroupJid, normalizeJid } from '../whatsapp/jid.js';
+import { failedCheckReport, formatCheckReport, runSystemCheck } from './check-command.js';
+import { runInstallWizard } from './install-command.js';
+import { runUpdate } from './update-command.js';
 
 interface GlobalOptions {
   config?: string;
@@ -157,16 +160,90 @@ async function enqueueAndMaybeDryRun(options: {
 }
 
 program
-  .name('sajadbot-wa')
+  .name('wts')
   .description('Durable allowlist-only WhatsApp linked-device queue worker')
   .version('1.0.0')
   .option('-c, --config <path>', 'environment file path')
   .option('--dry-run', 'disable all outbound WhatsApp delivery')
   .option('--json', 'emit machine-readable JSON');
 
+program
+  .command('install')
+  .description('Run the guided first-time setup wizard')
+  .option('-y, --yes', 'use safe defaults without interactive prompts')
+  .option('--production', 'create a real-delivery config instead of Dry-run')
+  .option('--skip-login', 'do not connect to WhatsApp during setup')
+  .option('--pairing-phone <number>', 'phone with country code for pairing-code login')
+  .action(
+    async (options: {
+      yes?: boolean;
+      production?: boolean;
+      skipLogin?: boolean;
+      pairingPhone?: string;
+    }) => {
+      const global = program.opts<GlobalOptions>();
+      const result = await runInstallWizard({
+        configPath: global.config ?? '.env',
+        yes: options.yes ?? false,
+        production: options.production ?? false,
+        skipLogin: options.skipLogin ?? false,
+        ...(options.pairingPhone ? { pairingPhone: options.pairingPhone } : {}),
+        authenticate: async (config, pairingPhone) => {
+          ensureApplicationDirectories(config);
+          const context = createAppContext(config);
+          try {
+            await withConnectedManager(
+              context,
+              async () => {
+                context.audit.add('auth_login', { actor: 'install' });
+              },
+              {
+                ...(pairingPhone ? { pairingPhone } : {}),
+                showQr: true,
+              },
+            );
+          } finally {
+            context.close();
+          }
+        },
+      });
+      const report = runSystemCheck(result.config);
+      if (global.json) output(report);
+      else output(formatCheckReport(report));
+      if (!report.healthy) process.exitCode = 1;
+    },
+  );
+
+program
+  .command('check')
+  .description('Run local diagnostics without sending a WhatsApp message')
+  .action(() => {
+    let report;
+    try {
+      report = runSystemCheck(getConfig());
+    } catch (error) {
+      report = failedCheckReport(error);
+    }
+    if (program.opts<GlobalOptions>().json) output(report);
+    else output(formatCheckReport(report));
+    if (!report.healthy) process.exitCode = 1;
+  });
+
+program
+  .command('update')
+  .description('Pull, validate, build, and deploy the latest version')
+  .option('--source <path>', 'override the recorded source checkout path')
+  .option('--skip-pull', 'deploy the current checkout without running git pull')
+  .action((options: { source?: string; skipPull?: boolean }) => {
+    runUpdate({
+      ...(options.source ? { sourceDir: options.source } : {}),
+      skipPull: options.skipPull ?? false,
+    });
+  });
+
 program.command('start').description('Run the queue daemon in the foreground').action(async () => {
   const result = await runDaemon(getConfig());
-  if (result === 'AUTH_REQUIRED') output('Authentication required. Run: sajadbot-wa auth login');
+  if (result === 'AUTH_REQUIRED') output('Authentication required. Run: wts auth login');
 });
 
 program.command('status').description('Show service, auth, and queue status').action(async () => {

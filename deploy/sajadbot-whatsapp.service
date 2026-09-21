@@ -12,7 +12,7 @@ User=sajadbot-wa
 Group=sajadbot-wa
 WorkingDirectory=/var/lib/sajadbot-whatsapp
 Environment=NODE_ENV=production
-ExecStart=/usr/local/bin/sajadbot-wa --config /etc/sajadbot-whatsapp/bot.env start
+ExecStart=/usr/local/bin/wts --config /etc/sajadbot-whatsapp/bot.env start
 Restart=on-failure
 RestartSec=15s
 TimeoutStopSec=45s

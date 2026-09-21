@@ -57,14 +57,23 @@ npm run typecheck
 npm run lint
 npm test
 npm run build
+npm link
 ```
 
-Copy the example and adjust paths and timezone:
+`npm link` exposes both `wts` (preferred) and the backwards-compatible `sajadbot-wa` alias. Inspect the command tree or run the guided setup:
 
 ```bash
-cp .env.example .env
-npm run dev -- status
+wts --help
+wts install --help
+wts install
+wts check
 ```
+
+The interactive installer checks Node.js, creates a private environment file without overwriting an existing one, validates settings, prepares state/media directories, initializes and migrates SQLite, and optionally starts linked-device login. It defaults to safe offline dry-run mode. For automation or CI, use `wts install --yes --skip-login`; add `--production` only when a real-delivery configuration is intentional. Before `npm link`, the same wizard is available as `npm run dev -- install`.
+
+`wts check` never sends a message. It reports `healthy`, `warning`, or `unhealthy`, checks Node.js, directory permissions, SQLite/WAL, daemon lock, auth and connection state, queue problems, and missing staged media, and exits non-zero only for an unhealthy result. Use `wts --json check` for machine-readable output.
+
+Manual setup remains available by copying `.env.example` to `.env` and adjusting paths and timezone.
 
 Configuration is validated with Zod and invalid values fail fast. Timestamps are stored as UTC ISO-8601. `schedule --at` rejects timestamps without `Z` or an explicit offset; `TIMEZONE` controls human-facing display only.
 
@@ -195,7 +204,7 @@ npm run smoke:retry
 
 ## Optional Message Yourself controller
 
-Set `SELF_CONTROLLER_ENABLED=true` only if desired. CLI remains authoritative. Supported commands are `/status`, `/queue [failed]`, `/groups [refresh]`, `/send`, `/schedule`, and `/cancel`.
+Set `SELF_CONTROLLER_ENABLED=true` only if desired. CLI remains authoritative. Supported commands are `/help`, `/status`, `/queue [failed]`, `/groups`, `/groups refresh`, `/groups alias`, `/groups allow`, `/groups deny`, `/send`, `/schedule`, and `/cancel`. The in-chat help walks the linked-account owner through group discovery, aliasing, explicit allowlisting, and sending a first text message.
 
 Commands are accepted only for a current `notify` event that is `fromMe`, targets the authenticated account's verified PN JID or LID self-chat, has a matching participant when present, is not forwarded, is not historical, and has not been processed before. Processed IDs are persistent. Groups, arbitrary DMs, replayed history, forwarded commands, and identity mismatches are ignored.
 
@@ -205,6 +214,7 @@ Commands are accepted only for a current `notify` event that is `fromMe`, target
 npm run dev -- status
 npm run dev -- health
 npm run dev -- audit --limit 100
+wts check
 ```
 
 `health` never sends a message and returns non-zero for fatal/auth-required conditions unless offline dry-run is active. It reports the connection and auth states, queue counts, oldest pending time, review/failed counts, last send/connection, worker state, journal mode, and dry-run state.
@@ -234,11 +244,12 @@ Authenticate and configure groups as the dedicated account:
 
 ```bash
 sudoedit /etc/sajadbot-whatsapp/bot.env
-sudo -u sajadbot-wa sajadbot-wa --config /etc/sajadbot-whatsapp/bot.env auth login
-sudo -u sajadbot-wa sajadbot-wa --config /etc/sajadbot-whatsapp/bot.env groups refresh
-sudo -u sajadbot-wa sajadbot-wa --config /etc/sajadbot-whatsapp/bot.env groups list
-sudo -u sajadbot-wa sajadbot-wa --config /etc/sajadbot-whatsapp/bot.env groups alias GROUP_JID operations
-sudo -u sajadbot-wa sajadbot-wa --config /etc/sajadbot-whatsapp/bot.env groups allow operations
+sudo -u sajadbot-wa wts --config /etc/sajadbot-whatsapp/bot.env auth login
+sudo -u sajadbot-wa wts --config /etc/sajadbot-whatsapp/bot.env groups refresh
+sudo -u sajadbot-wa wts --config /etc/sajadbot-whatsapp/bot.env groups list
+sudo -u sajadbot-wa wts --config /etc/sajadbot-whatsapp/bot.env groups alias GROUP_JID operations
+sudo -u sajadbot-wa wts --config /etc/sajadbot-whatsapp/bot.env groups allow operations
+sudo -u sajadbot-wa wts --config /etc/sajadbot-whatsapp/bot.env check
 sudo systemctl start sajadbot-whatsapp
 sudo systemctl status sajadbot-whatsapp
 ```
@@ -261,8 +272,11 @@ sudo systemctl restart sajadbot-whatsapp
 sudo systemctl status sajadbot-whatsapp
 sudo journalctl -u sajadbot-whatsapp --since today
 
-# From a new reviewed/build-tested checkout:
-sudo bash scripts/upgrade.sh
+# Pull, validate, test, build, deploy, and restart when needed:
+sudo wts update
+
+# Deploy the current checkout without pulling (for a reviewed local build):
+sudo wts update --source /path/to/sajadbot-whatsapp --skip-pull
 
 # Preserves database, auth, media, config, and logs:
 sudo bash scripts/uninstall.sh
@@ -270,6 +284,8 @@ sudo bash scripts/uninstall.sh
 # Permanently deletes those sensitive assets as well:
 sudo bash scripts/uninstall.sh --purge
 ```
+
+`wts update` uses the source checkout recorded by `install.sh` or the most recent `upgrade.sh`. It refuses a dirty checkout, pulls only with `--ff-only`, and deploys only after dependency installation, typecheck, lint, tests, and build all succeed. Use `--source` if the checkout was moved. The first release containing this command must be installed once with `sudo bash scripts/upgrade.sh`; subsequent releases can use `sudo wts update`.
 
 ## Backup and restore
 

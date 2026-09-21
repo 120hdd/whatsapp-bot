@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark light">
-  <meta name="description" content="راهنمای فارسی نصب، راه‌اندازی، نگهداری و رفع خطای SajadBot WhatsApp در ویندوز و Ubuntu Server">
+  <meta name="description" content="راهنمای فارسی استفاده در واتساپ، نصب، راه‌اندازی، نگهداری و رفع خطای SajadBot WhatsApp در ویندوز و Ubuntu Server">
   <title>راهنمای راه‌اندازی SajadBot WhatsApp</title>
   <style>
     :root {
@@ -209,7 +209,7 @@
   <header class="masthead">
     <div class="eyebrow">راهنمای عملیاتی • نسخهٔ پروژه 1.0.0</div>
     <h1>نصب، راه‌اندازی و نگهداری SajadBot WhatsApp</h1>
-    <p class="lead">راهنمای فارسی برای اجرای امن روی ویندوز، استقرار روی Ubuntu Server، شناخت صف و وضعیت‌ها، خواندن لاگ‌های JSON و رفع خطاهای متداول.</p>
+    <p class="lead">راهنمای فارسی برای استفادهٔ کاربر در واتساپ، اجرای امن روی ویندوز، استقرار روی Ubuntu Server، شناخت صف و وضعیت‌ها، خواندن لاگ‌های JSON و رفع خطاهای متداول.</p>
     <div class="badges" aria-label="مشخصات پروژه">
       <span class="badge">Node.js 20+</span>
       <span class="badge">TypeScript / ESM</span>
@@ -237,6 +237,20 @@
         </div>
       </section>
 
+      <section id="whatsapp-user" data-search="کاربر نهایی واتساپ استفاده دریافت پیام گروه دستور پاسخ help">
+        <div class="kicker">راهنمای کاربر نهایی</div>
+        <h2>چطور در WhatsApp از بات استفاده کنم؟</h2>
+        <p>اگر فقط در WhatsApp با این بات کار می‌کنید، لازم نیست برنامه‌ای نصب کنید، دستگاهی را لینک کنید یا به خط فرمان دسترسی داشته باشید. اپراتور بات، حساب WhatsApp را به سرویس متصل و گروه‌های مجاز را تعیین می‌کند.</p>
+        <ol>
+          <li>عضو گروهی باشید که اپراتور برای ارسال پیام تأیید کرده است.</li>
+          <li>پیام‌های بات را مثل پیام معمولی گروه دریافت کنید. بات می‌تواند متن، تصویر، ویدئو، سند و فایل صوتی بفرستد؛ بعضی پیام‌ها نیز ممکن است برای زمان مشخصی برنامه‌ریزی شده باشند.</li>
+          <li>برای دیدن متن یا دانلود رسانه از امکانات عادی خود WhatsApp استفاده کنید. هیچ اپ، پنل یا ثبت‌نام جداگانه‌ای لازم نیست.</li>
+          <li>اگر پیام مورد انتظار نرسید یا محتوای آن اشتباه بود، موضوع را به مدیر گروه یا اپراتور بات اطلاع دهید؛ بررسی صف، ارسال مجدد و لغو پیام فقط در اختیار اپراتور است.</li>
+        </ol>
+        <div class="note"><strong>این بات در نسخهٔ فعلی یک‌طرفه است.</strong>پیام خصوصی، پاسخ داخل گروه و فرمان‌هایی مانند <code>/help</code> از طرف کاربران عادی پردازش نمی‌شوند. بنابراین برای دریافت پیام لازم نیست چیزی برای بات بفرستید.</div>
+        <div class="warning"><strong>فرمان‌های مدیریتی برای شما نیستند.</strong>فرمان‌های <code>/send</code>، <code>/schedule</code>، <code>/queue</code> و موارد مشابه فقط در گفت‌وگوی «Message Yourself» حساب مالک و پس از فعال‌سازی کنترل‌کنندهٔ امن قابل استفاده‌اند؛ نوشتن آن‌ها در گروه یا پیام خصوصی هیچ عملیاتی ایجاد نمی‌کند.</div>
+      </section>
+
       <section id="prerequisites" data-search="پیش نیاز node npm git ویندوز ubuntu build tools">
         <div class="kicker">مرحلهٔ ۱</div>
         <h2>پیش‌نیازها</h2>
@@ -262,8 +276,19 @@ npm run typecheck
 npm run lint
 npm test
 npm run build
-Copy-Item .env.example .env
-npm run dev -- status</code></pre></div>
+npm link
+wts -h
+wts install</code></pre></div>
+        <div class="note"><strong>نصب مرحله‌به‌مرحله</strong>فرمان <code>wts install</code> نسخهٔ Node را بررسی می‌کند، تنظیمات را با سؤال‌های کوتاه می‌سازد، مسیرها و SQLite را آماده می‌کند و در حالت production ورود WhatsApp را پیشنهاد می‌دهد. فایل موجود را هیچ‌وقت بی‌اجازه بازنویسی نمی‌کند.</div>
+        <div class="codebox"><pre><code># نصب امن و بدون پرسش برای CI یا تست
+wts install --yes --skip-login
+
+# ساخت تنظیمات ارسال واقعی بدون اتصال خودکار
+wts install --yes --production --skip-login
+
+# نمایش همهٔ گزینه‌ها
+wts install -h
+wts check -h</code></pre></div>
         <p>مسیرهای نسبی فایل <code>.env</code> نسبت به پوشه‌ای تفسیر می‌شوند که فرمان را از آن اجرا کرده‌اید. برای جلوگیری از ابهام، همیشه از ریشهٔ پروژه اجرا کنید یا مسیرهای مطلق ویندوزی قرار دهید.</p>
 
         <h3>۲) ورود به WhatsApp</h3>
@@ -310,15 +335,15 @@ npm run lint
 npm test
 npm run build
 sudo bash scripts/install.sh</code></pre></div>
-        <p>Installer کاربر سیستمی <code>sajadbot-wa</code>، مسیرهای امن، فرمان <code>/usr/local/bin/sajadbot-wa</code> و unit مربوط به systemd را می‌سازد و سرویس را enable می‌کند؛ ولی قبل از login آن را start نمی‌کند.</p>
+        <p>Installer کاربر سیستمی <code>sajadbot-wa</code>، مسیرهای امن، فرمان اصلی <code>/usr/local/bin/wts</code> و alias قدیمی <code>sajadbot-wa</code> را می‌سازد و سرویس را enable می‌کند؛ ولی قبل از login آن را start نمی‌کند.</p>
 
         <h3>۲) پیکربندی، ورود و allowlist</h3>
         <div class="codebox"><pre><code>sudoedit /etc/sajadbot-whatsapp/bot.env
-sudo -u sajadbot-wa sajadbot-wa --config /etc/sajadbot-whatsapp/bot.env auth login
-sudo -u sajadbot-wa sajadbot-wa --config /etc/sajadbot-whatsapp/bot.env groups refresh
-sudo -u sajadbot-wa sajadbot-wa --config /etc/sajadbot-whatsapp/bot.env groups list
-sudo -u sajadbot-wa sajadbot-wa --config /etc/sajadbot-whatsapp/bot.env groups alias GROUP_JID operations
-sudo -u sajadbot-wa sajadbot-wa --config /etc/sajadbot-whatsapp/bot.env groups allow operations</code></pre></div>
+sudo -u sajadbot-wa wts --config /etc/sajadbot-whatsapp/bot.env auth login
+sudo -u sajadbot-wa wts --config /etc/sajadbot-whatsapp/bot.env groups refresh
+sudo -u sajadbot-wa wts --config /etc/sajadbot-whatsapp/bot.env groups list
+sudo -u sajadbot-wa wts --config /etc/sajadbot-whatsapp/bot.env groups alias GROUP_JID operations
+sudo -u sajadbot-wa wts --config /etc/sajadbot-whatsapp/bot.env groups allow operations</code></pre></div>
 
         <h3>۳) شروع و کنترل سرویس</h3>
         <div class="codebox"><pre><code>sudo systemctl start sajadbot-whatsapp
@@ -327,7 +352,8 @@ sudo systemctl restart sajadbot-whatsapp
 sudo systemctl stop sajadbot-whatsapp
 
 # سلامت برنامه بدون ارسال پیام
-sudo -u sajadbot-wa sajadbot-wa --config /etc/sajadbot-whatsapp/bot.env health</code></pre></div>
+sudo -u sajadbot-wa wts --config /etc/sajadbot-whatsapp/bot.env health
+sudo -u sajadbot-wa wts --config /etc/sajadbot-whatsapp/bot.env check</code></pre></div>
         <div class="table-wrap"><table>
           <thead><tr><th>مسیر</th><th>کاربرد</th></tr></thead>
           <tbody>
@@ -340,14 +366,21 @@ sudo -u sajadbot-wa sajadbot-wa --config /etc/sajadbot-whatsapp/bot.env health</
         <p>unit پروژه با <code>ProtectSystem=strict</code>، <code>ProtectHome=true</code>، <code>NoNewPrivileges=true</code> و capability خالی اجرا می‌شود. در نبود auth، برنامه با موفقیت خارج می‌شود تا <code>Restart=on-failure</code> طوفان restart نسازد.</p>
 
         <h3>به‌روزرسانی و حذف</h3>
-        <div class="codebox"><pre><code># بعد از checkout، نصب وابستگی، تست و build نسخهٔ جدید
-sudo bash scripts/upgrade.sh
+        <div class="codebox"><pre><code># دریافت، اعتبارسنجی، تست، build، نصب و restart خودکار
+sudo wts update
+
+# اگر checkout جابه‌جا شده است
+sudo wts update --source /path/to/sajadbot-whatsapp
+
+# نصب یک checkout محلی بررسی‌شده بدون git pull
+sudo wts update --source /path/to/sajadbot-whatsapp --skip-pull
 
 # حذف برنامه با حفظ state، auth، config و logs
 sudo bash scripts/uninstall.sh
 
 # حذف دائمی همهٔ داده‌های حساس
 sudo bash scripts/uninstall.sh --purge</code></pre></div>
+        <p><code>wts update</code> اگر checkout تغییر محلی داشته باشد متوقف می‌شود و فقط از <code>git pull --ff-only</code> استفاده می‌کند. سپس dependencyها، typecheck، lint، همهٔ تست‌ها و build را اجرا می‌کند و فقط در صورت موفقیت همهٔ مراحل نسخهٔ نصب‌شده را جایگزین می‌کند. برای نصب اولین نسخه‌ای که این فرمان را دارد، یک بار اجرای دستی <code>sudo bash scripts/upgrade.sh</code> لازم است؛ به‌روزرسانی‌های بعدی با <code>sudo wts update</code> انجام می‌شوند.</p>
         <div class="danger"><strong>گزینهٔ مخرب</strong><code>--purge</code> دیتابیس، credentialهای دستگاه لینک‌شده، media، پیکربندی و لاگ‌ها را برای همیشه حذف می‌کند.</div>
       </section>
 
@@ -380,7 +413,7 @@ sudo bash scripts/uninstall.sh --purge</code></pre></div>
       <section id="operations" data-search="فرمان ارسال schedule queue status audit dry run عملیات">
         <div class="kicker">کار روزمره</div>
         <h2>فرمان‌های پرکاربرد</h2>
-        <p>در ویندوز/توسعه پیشوند <code>npm run dev --</code> و در سرور پیشوند <code>sudo -u sajadbot-wa sajadbot-wa --config /etc/sajadbot-whatsapp/bot.env</code> را استفاده کنید.</p>
+        <p>بعد از <code>npm link</code> در ویندوز از <code>wts</code> و در سرور از پیشوند <code>sudo -u sajadbot-wa wts --config /etc/sajadbot-whatsapp/bot.env</code> استفاده کنید. alias قدیمی همچنان کار می‌کند.</p>
         <h3>ارسال و زمان‌بندی</h3>
         <div class="codebox"><pre><code>npm run dev -- send operations --text "Deployment complete"
 npm run dev -- send operations --file .\photo.jpg --caption "Site photo"
@@ -405,6 +438,155 @@ npm run smoke:dry-run
 npm run smoke:recovery
 npm run smoke:retry</code></pre></div>
         <p>Dry-run تمام مراحل validation، allowlist، staging، hashing، idempotency، queue، audit و logging را اجرا می‌کند؛ اما socket واتساپ نمی‌سازد و job را با شناسهٔ واضح <code>dryrun:...</code> به وضعیت <code>DRY_RUN</code> می‌برد.</p>
+      </section>
+
+      <section id="cli-reference" data-search="مرجع کامل cli wts command option install check update auth groups send schedule queue audit time help">
+        <div class="kicker">مرجع CLI</div>
+        <h2>تمام فرمان‌های <code>wts</code></h2>
+        <p>قالب کلی اجرای برنامه <code>wts [گزینه‌های عمومی] &lt;command&gt; [گزینه‌های command]</code> است. روی سرور production تقریباً همیشه فایل تنظیمات واقعی را صریحاً بدهید:</p>
+        <div class="codebox"><pre><code>sudo -u sajadbot-wa wts --config /etc/sajadbot-whatsapp/bot.env &lt;command&gt;
+
+# فرمان update باید با root اجرا شود
+sudo wts update</code></pre></div>
+        <div class="warning"><strong><code>wts check</code> را بدون <code>--config</code> از مسیر دلخواه اجرا نکنید.</strong>در آن حالت برنامه ممکن است <code>.env</code> یا مسیرهای پیش‌فرض همان پوشه را استفاده کند و گزارشی از دیتابیس اشتباه نشان دهد.</div>
+
+        <h3>گزینه‌های عمومی</h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>گزینه</th><th>کاربرد</th><th>نمونه</th></tr></thead>
+          <tbody>
+            <tr><td><code>-c, --config &lt;path&gt;</code></td><td>انتخاب فایل env. بهتر است پیش از نام command نوشته شود.</td><td><code>wts -c /etc/sajadbot-whatsapp/bot.env status</code></td></tr>
+            <tr><td><code>--dry-run</code></td><td>برای همان اجرا ارسال واقعی را غیرفعال می‌کند.</td><td><code>wts --dry-run send dry-run-test --text "test"</code></td></tr>
+            <tr><td><code>--json</code></td><td>خروجی قابل پردازش JSON برای اسکریپت‌ها می‌سازد.</td><td><code>wts --json check</code></td></tr>
+            <tr><td><code>-h, --help</code></td><td>راهنمای کل CLI یا یک command خاص را نمایش می‌دهد.</td><td><code>wts groups --help</code></td></tr>
+            <tr><td><code>-V, --version</code></td><td>نسخهٔ CLI را نمایش می‌دهد.</td><td><code>wts --version</code></td></tr>
+          </tbody>
+        </table></div>
+
+        <h3>نصب، بررسی، اجرا و به‌روزرسانی</h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>فرمان</th><th>کاربرد و گزینه‌ها</th><th>نمونه</th></tr></thead>
+          <tbody>
+            <tr><td><code>wts install</code></td><td>ویزارد نصب اولیه. <code>--yes</code> پاسخ‌های امن، <code>--production</code> تنظیم ارسال واقعی، <code>--skip-login</code> ردکردن login و <code>--pairing-phone NUMBER</code> ورود با کد pairing.</td><td><code>wts install --yes --production --skip-login</code></td></tr>
+            <tr><td><code>wts check</code></td><td>نسخهٔ Node، permission مسیرها، lock، SQLite/WAL، auth، اتصال، صف و media را بدون ارسال پیام بررسی می‌کند.</td><td><code>wts -c /etc/sajadbot-whatsapp/bot.env check</code></td></tr>
+            <tr><td><code>wts update</code></td><td>با root: checkout تمیز را pull می‌کند، dependency، typecheck، lint، test و build را اجرا می‌کند و سرویس را ارتقا می‌دهد. <code>--source PATH</code> مسیر checkout و <code>--skip-pull</code> نسخهٔ محلی را انتخاب می‌کند.</td><td><code>sudo wts update</code></td></tr>
+            <tr><td><code>wts start</code></td><td>daemon و Worker را در foreground اجرا می‌کند. در production معمولاً systemd این فرمان را اجرا می‌کند.</td><td><code>wts -c .env start</code></td></tr>
+            <tr><td><code>wts status</code></td><td>نمای کلی auth، اتصال، Worker، WAL، صف و آخرین ارسال را نشان می‌دهد.</td><td><code>wts -c .env status</code></td></tr>
+            <tr><td><code>wts health</code></td><td>آمادگی سرویس را بررسی می‌کند و برای وضعیت fatal/auth-required exit code غیرصفر می‌دهد.</td><td><code>wts -c .env health</code></td></tr>
+          </tbody>
+        </table></div>
+
+        <h3>احراز هویت WhatsApp</h3>
+        <div class="note"><strong>قفل تک‌پردازه</strong>برای login یا logout متصل، ابتدا سرویس در حال اجرا را متوقف کنید؛ daemon و فرمان auth نباید هم‌زمان یک socket بسازند.</div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>فرمان</th><th>کاربرد</th><th>نمونه</th></tr></thead>
+          <tbody>
+            <tr><td><code>wts auth login</code></td><td>ورود تعاملی با QR. گزینهٔ <code>--pairing-phone NUMBER</code> کد pairing می‌سازد؛ شماره فقط رقم و همراه کد کشور باشد.</td><td><code>wts -c .env auth login --pairing-phone 989121234567</code></td></tr>
+            <tr><td><code>wts auth status</code></td><td>وجود credential محلی، آخرین وضعیت اتصال، JID حساب و زمان آخرین اتصال را نشان می‌دهد.</td><td><code>wts -c .env auth status</code></td></tr>
+            <tr><td><code>wts auth logout</code></td><td>دستگاه لینک‌شده را logout و credential محلی را حذف می‌کند. <code>--local-only</code> فقط دادهٔ محلی را برای بازیابی اضطراری پاک می‌کند.</td><td><code>wts -c .env auth logout --local-only</code></td></tr>
+          </tbody>
+        </table></div>
+
+        <h3>کشف، نام‌گذاری و مجازکردن گروه‌ها</h3>
+        <p><code>REFERENCE</code> می‌تواند JID کامل گروه یا alias آن باشد. alias باید با حرف یا عدد شروع شود و فقط حروف انگلیسی، عدد، نقطه، زیرخط و خط تیره داشته باشد.</p>
+        <div class="table-wrap"><table>
+          <thead><tr><th>فرمان</th><th>کاربرد</th><th>نمونه</th></tr></thead>
+          <tbody>
+            <tr><td><code>wts groups refresh</code></td><td>گروه‌های حساب را از WhatsApp دریافت و metadata را به‌روزرسانی می‌کند. گروه جدید غیرفعال می‌ماند.</td><td><code>wts -c .env groups refresh</code></td></tr>
+            <tr><td><code>wts groups list</code></td><td>همهٔ گروه‌های cacheشده را نشان می‌دهد. <code>--allowed</code> فقط گروه‌های مجاز را نمایش می‌دهد.</td><td><code>wts -c .env groups list --allowed</code></td></tr>
+            <tr><td><code>wts groups show REFERENCE</code></td><td>جزئیات یک گروه را با JID یا alias نشان می‌دهد.</td><td><code>wts -c .env groups show operations</code></td></tr>
+            <tr><td><code>wts groups alias JID ALIAS</code></td><td>یک نام کوتاه پایدار برای JID گروه ثبت می‌کند.</td><td><code>wts -c .env groups alias 120363000000000000@g.us operations</code></td></tr>
+            <tr><td><code>wts groups unalias REFERENCE</code></td><td>alias فعلی گروه را حذف می‌کند؛ خود گروه حذف نمی‌شود.</td><td><code>wts -c .env groups unalias operations</code></td></tr>
+            <tr><td><code>wts groups allow REFERENCE</code></td><td>ارسال به گروه را صریحاً مجاز می‌کند.</td><td><code>wts -c .env groups allow operations</code></td></tr>
+            <tr><td><code>wts groups deny REFERENCE</code></td><td>گروه را غیرفعال و کارهای ارسال‌نشدهٔ قابل‌لغو آن را cancel می‌کند.</td><td><code>wts -c .env groups deny operations</code></td></tr>
+            <tr><td><code>wts groups import-local JID</code></td><td>فقط برای آماده‌سازی آفلاین Dry-run یک گروه غیرفعال می‌سازد. <code>--subject NAME</code> اجباری و <code>--alias ALIAS</code> اختیاری است؛ این فرمان عضو گروه نمی‌شود.</td><td><code>wts groups import-local 120363000000000000@g.us --subject "Test" --alias dry-test</code></td></tr>
+          </tbody>
+        </table></div>
+
+        <h3>ارسال فوری و زمان‌بندی</h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>فرمان/گزینه</th><th>معنی</th><th>نمونه</th></tr></thead>
+          <tbody>
+            <tr><td><code>wts send DESTINATION</code></td><td>پیام را برای مقصد مجاز در صف فوری قرار می‌دهد.</td><td><code>wts -c .env send operations --text "Deployment complete"</code></td></tr>
+            <tr><td><code>wts schedule DESTINATION --at TIMESTAMP</code></td><td>پیام را برای زمان دارای <code>Z</code> یا offset صریح در صف می‌گذارد.</td><td><code>wts -c .env schedule operations --at "2026-09-23T20:00:00+03:30" --text "جلسه شروع شد"</code></td></tr>
+            <tr><td><code>--text MESSAGE</code></td><td>متن پیام بدون media.</td><td><code>--text "متن پیام"</code></td></tr>
+            <tr><td><code>--file PATH</code></td><td>ارسال image، video، document یا audio؛ فایل پیش از صف به storage برنامه کپی می‌شود.</td><td><code>--file ./report.pdf</code></td></tr>
+            <tr><td><code>--caption TEXT</code></td><td>caption برای image/video/document. برای audio قابل اتکا نیست.</td><td><code>--file ./photo.jpg --caption "تصویر پروژه"</code></td></tr>
+            <tr><td><code>--filename NAME</code></td><td>نام نمایشی document در WhatsApp.</td><td><code>--file ./report.pdf --filename report.pdf</code></td></tr>
+            <tr><td><code>--force</code></td><td>فقط برای تکرار عمدی؛ duplicate suppression را برای درخواست تازه دور می‌زند.</td><td><code>wts -c .env send operations --text "Repeat" --force</code></td></tr>
+          </tbody>
+        </table></div>
+
+        <h3>مشاهده و مدیریت صف</h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>فرمان</th><th>کاربرد</th><th>نمونه</th></tr></thead>
+          <tbody>
+            <tr><td><code>wts queue list</code></td><td>کارهای صف را نمایش می‌دهد؛ <code>--limit COUNT</code> سقف خروجی است و پیش‌فرض ۱۰۰ است.</td><td><code>wts -c .env queue list --limit 25</code></td></tr>
+            <tr><td><code>wts queue show ID</code></td><td>جزئیات یک job را نشان می‌دهد. <code>--include-content</code> متن خصوصی و مسیر staged را نیز نمایش می‌دهد.</td><td><code>wts -c .env queue show JOB_UUID --include-content</code></td></tr>
+            <tr><td><code>wts queue pending</code></td><td>کارهای <code>PENDING</code>، <code>SCHEDULED</code>، <code>RETRY</code> و <code>WAITING_RATE_LIMIT</code> را نشان می‌دهد.</td><td><code>wts -c .env queue pending</code></td></tr>
+            <tr><td><code>wts queue failed</code></td><td>کارهای نهایی‌شده با وضعیت <code>FAILED</code>.</td><td><code>wts -c .env queue failed</code></td></tr>
+            <tr><td><code>wts queue review</code></td><td>ارسال‌های نامطمئن <code>REVIEW_REQUIRED</code> پس از crash.</td><td><code>wts -c .env queue review</code></td></tr>
+            <tr><td><code>wts queue retry ID</code></td><td>پس از رفع علت، job مجاز را دستی برای تلاش دوباره آماده می‌کند.</td><td><code>wts -c .env queue retry JOB_UUID</code></td></tr>
+            <tr><td><code>wts queue cancel ID</code></td><td>یک job ارسال‌نشدهٔ قابل‌لغو را cancel می‌کند.</td><td><code>wts -c .env queue cancel JOB_UUID</code></td></tr>
+            <tr><td><code>wts queue mark-sent ID</code></td><td>پس از بررسی WhatsApp، یک job نامطمئن را به‌عنوان تحویل‌شده ثبت می‌کند.</td><td><code>wts -c .env queue mark-sent JOB_UUID</code></td></tr>
+          </tbody>
+        </table></div>
+
+        <h3>Audit، زمان و کشف راهنما</h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>فرمان</th><th>کاربرد</th><th>نمونه</th></tr></thead>
+          <tbody>
+            <tr><td><code>wts audit</code></td><td>رویدادهای کنترلی پایدار را نشان می‌دهد؛ <code>--limit COUNT</code> پیش‌فرض ۱۰۰ دارد.</td><td><code>wts -c .env audit --limit 50</code></td></tr>
+            <tr><td><code>wts time TIMESTAMP</code></td><td>timestamp ذخیره‌شدهٔ UTC را در <code>TIMEZONE</code> تنظیم‌شده نمایش می‌دهد.</td><td><code>wts -c .env time 2026-09-23T16:30:00Z</code></td></tr>
+            <tr><td><code>wts --help</code></td><td>فهرست همهٔ commandهای سطح اصلی.</td><td><code>wts --help</code></td></tr>
+            <tr><td><code>wts COMMAND --help</code></td><td>syntax و optionهای همان command یا گروه فرمان.</td><td><code>wts queue --help</code></td></tr>
+          </tbody>
+        </table></div>
+      </section>
+
+      <section id="whatsapp-commands" data-search="دستورات داخل واتساپ message yourself help status groups alias allow deny send schedule queue cancel">
+        <div class="kicker">کنترل از WhatsApp</div>
+        <h2>تمام فرمان‌های داخل Message Yourself</h2>
+        <p>این رابط برای مالک همان حساب WhatsApp متصل به بات است. فرمان‌ها را در گفت‌وگوی <span class="ltr">Message Yourself</span> همان حساب بفرستید؛ گروه‌ها، پیام خصوصی کاربران دیگر، پیام forwardشده و history قدیمی پردازش نمی‌شوند.</p>
+        <h3>فعال‌سازی اولیه</h3>
+        <div class="codebox"><pre><code># /etc/sajadbot-whatsapp/bot.env
+DRY_RUN=false
+SELF_CONTROLLER_ENABLED=true
+
+sudo systemctl restart sajadbot-whatsapp
+sudo -u sajadbot-wa wts --config /etc/sajadbot-whatsapp/bot.env check</code></pre></div>
+        <p>پس از مشاهدهٔ <code>CONNECTED</code> یک پیام جدید <code>/help</code> بفرستید. فرمانی که پیش از start/restart ارسال شده باشد عمداً از history دوباره اجرا نمی‌شود.</p>
+
+        <h3>مسیر کامل ارسال اولین پیام گروهی</h3>
+        <ol>
+          <li>حساب WhatsApp متصل به بات را عضو گروه مقصد کنید و مطمئن شوید اجازهٔ ارسال دارد.</li>
+          <li><code>/groups refresh</code> را در Message Yourself بفرستید.</li>
+          <li>با <code>/groups</code> نام و JID گروه را پیدا کنید.</li>
+          <li>با <code>/groups alias 120363000000000000@g.us operations</code> یک نام کوتاه بسازید.</li>
+          <li>با <code>/groups allow operations</code> مقصد را صریحاً مجاز کنید.</li>
+          <li>با <code>/send operations سلام، این یک پیام آزمایشی است.</code> پیام را در صف بگذارید.</li>
+          <li>برای بررسی نتیجه از <code>/queue</code> یا <code>/status</code> استفاده کنید.</li>
+        </ol>
+
+        <h3>مرجع فرمان‌های WhatsApp</h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>فرمان</th><th>کاربرد</th><th>نمونه/نکته</th></tr></thead>
+          <tbody>
+            <tr><td><code>/help</code></td><td>راهنمای مرحله‌ای و توضیح تمام فرمان‌های WhatsApp را می‌فرستد.</td><td>برای شروع همین فرمان را بفرستید.</td></tr>
+            <tr><td><code>/status</code></td><td>وضعیت auth، اتصال، Worker، صف، WAL و آخرین ارسال را به‌شکل JSON نشان می‌دهد.</td><td><code>/status</code></td></tr>
+            <tr><td><code>/groups refresh</code></td><td>گروه‌های حساب را دریافت یا به‌روزرسانی می‌کند. گروه تازه همچنان غیرفعال است.</td><td>پس از اضافه‌شدن حساب به یک گروه اجرا کنید.</td></tr>
+            <tr><td><code>/groups</code></td><td>برای هر گروه وضعیت مجاز/غیرفعال، subject، alias و JID را نمایش می‌دهد.</td><td>JID لازم برای ساخت alias از اینجا برداشته می‌شود.</td></tr>
+            <tr><td><code>/groups alias JID ALIAS</code></td><td>نام کوتاه برای گروه می‌سازد. alias بدون فاصله و فقط شامل حروف انگلیسی، عدد، نقطه، زیرخط یا خط تیره باشد.</td><td><code>/groups alias 120363000000000000@g.us operations</code></td></tr>
+            <tr><td><code>/groups allow ALIAS_OR_JID</code></td><td>ارسال به گروه را مجاز می‌کند.</td><td><code>/groups allow operations</code></td></tr>
+            <tr><td><code>/groups deny ALIAS_OR_JID</code></td><td>ارسال را متوقف و پیام‌های ارسال‌نشدهٔ قابل‌لغو آن گروه را cancel می‌کند.</td><td><code>/groups deny operations</code></td></tr>
+            <tr><td><code>/send ALIAS_OR_JID MESSAGE</code></td><td>یک پیام متنی را برای ارسال فوری در صف قرار می‌دهد.</td><td><code>/send operations جلسه ساعت ۸ شروع می‌شود.</code></td></tr>
+            <tr><td><code>/schedule ALIAS_OR_JID DATE_TIME MESSAGE</code></td><td>پیام متنی را زمان‌بندی می‌کند. زمان حتماً offset یا <code>Z</code> داشته باشد.</td><td><code>/schedule operations 2026-09-23T20:00:00+03:30 جلسه شروع شد.</code></td></tr>
+            <tr><td><code>/queue</code></td><td>۲۰ job آخر را با ID، وضعیت، مقصد و تعداد تلاش نمایش می‌دهد.</td><td>ID ابتدای خط برای cancel استفاده می‌شود.</td></tr>
+            <tr><td><code>/queue failed</code></td><td>فقط jobهای <code>FAILED</code> و <code>REVIEW_REQUIRED</code> را نشان می‌دهد.</td><td>برای عیب‌یابی ارسال‌های مشکل‌دار.</td></tr>
+            <tr><td><code>/cancel JOB_ID</code></td><td>یک پیام ارسال‌نشدهٔ قابل‌لغو را با شناسهٔ صف لغو می‌کند.</td><td><code>/cancel 550e8400-e29b-41d4-a716-446655440000</code></td></tr>
+          </tbody>
+        </table></div>
+        <div class="note"><strong>محدودیت رابط WhatsApp</strong>فرمان‌های Message Yourself فعلاً فقط پیام متنی فوری یا زمان‌بندی‌شده می‌سازند. برای image، video، document، audio، retry، mark-sent و جزئیات کامل audit از CLI استفاده کنید.</div>
+        <div class="warning"><strong>اگر پاسخی دریافت نشد</strong><code>DRY_RUN=false</code> و <code>SELF_CONTROLLER_ENABLED=true</code>، وضعیت <code>CONNECTED</code>، اجرای daemon و ارسال فرمان در Message Yourself حساب لینک‌شده را بررسی کنید. سپس یک فرمان جدید بفرستید؛ پیام قدیمی replay نمی‌شود.</div>
       </section>
 
       <section id="logs" data-search="لاگ logs journald pino json audit status health debug">
@@ -466,7 +648,7 @@ Get-Content .\data\sajadbot.log -Wait -Tail 100</code></pre></div>
         <h2>خطاهای محتمل و راه‌حل</h2>
         <details open><summary><span class="bad">AUTH_REQUIRED / LOGGED_OUT</span></summary><div><p>credential وجود ندارد یا مجوز Linked device باطل شده است. jobها پاک نمی‌شوند.</p><div class="codebox"><pre><code># سرور
 sudo systemctl stop sajadbot-whatsapp
-sudo -u sajadbot-wa sajadbot-wa --config /etc/sajadbot-whatsapp/bot.env auth login
+sudo -u sajadbot-wa wts --config /etc/sajadbot-whatsapp/bot.env auth login
 sudo systemctl start sajadbot-whatsapp
 
 # ویندوز
@@ -519,11 +701,14 @@ npm run dev -- start</code></pre></div></div></details>
       <strong>فهرست و جست‌وجو</strong>
       <input id="search" type="search" placeholder="مثلاً AUTH_REQUIRED" aria-label="جست‌وجو در بخش‌ها">
       <a href="#intro">معرفی پروژه</a>
+      <a href="#whatsapp-user">راهنمای کاربر واتساپ</a>
       <a href="#prerequisites">پیش‌نیازها</a>
       <a href="#windows">راه‌اندازی ویندوز</a>
       <a href="#server">استقرار Ubuntu Server</a>
       <a href="#config">تنظیمات محیطی</a>
       <a href="#operations">فرمان‌های عملیاتی</a>
+      <a href="#cli-reference">مرجع کامل CLI</a>
+      <a href="#whatsapp-commands">فرمان‌های داخل WhatsApp</a>
       <a href="#logs">لاگ و مانیتورینگ</a>
       <a href="#states">وضعیت‌های صف</a>
       <a href="#troubleshooting">رفع خطا</a>

@@ -13,6 +13,7 @@ STATE_DIR="/var/lib/sajadbot-whatsapp"
 LOG_DIR="/var/log/sajadbot-whatsapp"
 SERVICE_USER="sajadbot-wa"
 SERVICE_FILE="/etc/systemd/system/sajadbot-whatsapp.service"
+SOURCE_RECORD="${CONFIG_DIR}/source-path"
 
 command -v node >/dev/null 2>&1 || { echo "Node.js 20+ is required." >&2; exit 1; }
 command -v npm >/dev/null 2>&1 || { echo "npm is required." >&2; exit 1; }
@@ -42,6 +43,9 @@ cp -a -- "${SOURCE_DIR}/dist/." "${APP_DIR}/dist/"
 install -o root -g root -m 0644 "${SOURCE_DIR}/package.json" "${APP_DIR}/package.json"
 install -o root -g root -m 0644 "${SOURCE_DIR}/package-lock.json" "${APP_DIR}/package-lock.json"
 install -o root -g root -m 0644 "${SOURCE_DIR}/README.md" "${APP_DIR}/README.md"
+printf '%s\n' "${SOURCE_DIR}" >"${SOURCE_RECORD}"
+chown root:root "${SOURCE_RECORD}"
+chmod 0600 "${SOURCE_RECORD}"
 
 (
   cd -- "${APP_DIR}"
@@ -71,15 +75,18 @@ EOF
 fi
 
 install -o root -g root -m 0644 "${SOURCE_DIR}/deploy/sajadbot-whatsapp.service" "${SERVICE_FILE}"
-cat >/usr/local/bin/sajadbot-wa <<'EOF'
+cat >/usr/local/bin/wts <<'EOF'
 #!/usr/bin/env bash
 exec node /opt/sajadbot-whatsapp/dist/cli/index.js "$@"
 EOF
-chmod 0755 /usr/local/bin/sajadbot-wa
+chmod 0755 /usr/local/bin/wts
+ln -sfn /usr/local/bin/wts /usr/local/bin/sajadbot-wa
 
 systemctl daemon-reload
 systemctl enable sajadbot-whatsapp.service
 
 echo "Installed. Authenticate before starting:"
-echo "  sudo -u ${SERVICE_USER} sajadbot-wa --config ${CONFIG_DIR}/bot.env auth login"
+echo "  sudo -u ${SERVICE_USER} wts --config ${CONFIG_DIR}/bot.env auth login"
+echo "  sudo -u ${SERVICE_USER} wts --config ${CONFIG_DIR}/bot.env check"
 echo "Then run: systemctl start sajadbot-whatsapp"
+echo "Future updates: sudo wts update"

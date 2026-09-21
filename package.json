@@ -5,6 +5,7 @@
   "description": "Durable, allowlist-only WhatsApp queue worker for a single linked device",
   "type": "module",
   "bin": {
+    "wts": "dist/cli/index.js",
     "sajadbot-wa": "dist/cli/index.js"
   },
   "engines": {

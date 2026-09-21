@@ -15,7 +15,7 @@ elif [[ -n "${1:-}" ]]; then
 fi
 
 systemctl disable --now sajadbot-whatsapp.service 2>/dev/null || true
-rm -f -- /etc/systemd/system/sajadbot-whatsapp.service /usr/local/bin/sajadbot-wa
+rm -f -- /etc/systemd/system/sajadbot-whatsapp.service /usr/local/bin/wts /usr/local/bin/sajadbot-wa
 systemctl daemon-reload
 rm -rf -- /opt/sajadbot-whatsapp
 

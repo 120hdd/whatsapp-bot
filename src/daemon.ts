@@ -42,7 +42,7 @@ export async function runDaemon(config: AppConfig): Promise<DaemonExit> {
         context.state.set('connectivity', 'AUTH_REQUIRED');
         context.state.set('outgoing_pause_reason', 'AUTH_REQUIRED');
         context.audit.add('auth_required', { actor: 'daemon' });
-        context.logger.error('WhatsApp login required; run `sajadbot-wa auth login`');
+        context.logger.error('WhatsApp login required; run `wts auth login`');
         return 'AUTH_REQUIRED';
       }
       connection = new ConnectionManager(
@@ -56,7 +56,7 @@ export async function runDaemon(config: AppConfig): Promise<DaemonExit> {
         await connection.connect({ autoReconnect: true });
       } catch (error) {
         if (connection.state === 'LOGGED_OUT' || connection.state === 'AUTH_REQUIRED') {
-          context.logger.error('WhatsApp authentication is invalid; run `sajadbot-wa auth login`');
+          context.logger.error('WhatsApp authentication is invalid; run `wts auth login`');
           return 'AUTH_REQUIRED';
         }
         throw error;

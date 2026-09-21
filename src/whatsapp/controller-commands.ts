@@ -11,23 +11,114 @@ function queueLines(context: AppContext, failedOnly: boolean): string {
     .join('\n');
 }
 
+function groupLines(context: AppContext): string {
+  const destinations = context.destinations.list();
+  if (!destinations.length) {
+    return 'هنوز گروهی پیدا نشده است. ابتدا /groups refresh را بفرستید.';
+  }
+  return destinations
+    .map(
+      (group) =>
+        `${group.enabled ? '✅ مجاز' : '⛔ غیرفعال'} | ${group.subject}\n` +
+        `alias: ${group.alias ?? '-'}\n` +
+        `jid: ${group.jid}`,
+    )
+    .join('\n\n');
+}
+
+function helpText(): string {
+  return [
+    '*راهنمای ارسال پیام به گروه*',
+    '',
+    'این فرمان‌ها فقط در Message Yourself همان حسابی کار می‌کنند که به بات متصل شده است.',
+    '',
+    '*راه‌اندازی یک گروه برای اولین بار*',
+    '1) حساب WhatsApp متصل به بات را عضو گروه مقصد کنید.',
+    '2) گروه‌ها را دریافت کنید:',
+    '/groups refresh',
+    '3) فهرست گروه‌ها و JID هر گروه را ببینید:',
+    '/groups',
+    '4) برای استفادهٔ راحت‌تر، یک نام کوتاه انگلیسی بدون فاصله بسازید:',
+    '/groups alias 120363012345678901@g.us family',
+    '5) گروه را صریحاً مجاز کنید:',
+    '/groups allow family',
+    '6) پیام بفرستید:',
+    '/send family سلام، این یک پیام آزمایشی است.',
+    '',
+    '*فرمان‌ها*',
+    '/help',
+    'نمایش همین راهنما.',
+    '',
+    '/status',
+    'نمایش وضعیت اتصال، Worker و صف.',
+    '',
+    '/groups refresh',
+    'دریافت یا به‌روزرسانی گروه‌هایی که حساب بات عضو آن‌هاست. گروه جدید ابتدا غیرفعال می‌ماند.',
+    '',
+    '/groups',
+    'نمایش نام، وضعیت، alias و JID همهٔ گروه‌ها.',
+    '',
+    '/groups alias JID ALIAS',
+    'ساخت نام کوتاه برای گروه. alias فقط می‌تواند حروف انگلیسی، عدد، نقطه، خط تیره یا زیرخط داشته باشد.',
+    'مثال: /groups alias 120363012345678901@g.us family',
+    '',
+    '/groups allow ALIAS_OR_JID',
+    'اجازهٔ ارسال به گروه.',
+    'مثال: /groups allow family',
+    '',
+    '/groups deny ALIAS_OR_JID',
+    'توقف ارسال به گروه و لغو پیام‌های ارسال‌نشدهٔ آن.',
+    'مثال: /groups deny family',
+    '',
+    '/send ALIAS_OR_JID MESSAGE',
+    'قرار دادن یک پیام متنی در صف ارسال فوری.',
+    'مثال: /send family جلسه ساعت ۸ شروع می‌شود.',
+    '',
+    '/schedule ALIAS_OR_JID DATE_TIME MESSAGE',
+    'زمان‌بندی پیام. زمان باید Z یا اختلاف ساعت صریح داشته باشد.',
+    'مثال: /schedule family 2026-09-23T20:00:00+03:30 جلسه شروع شد.',
+    '',
+    '/queue',
+    'نمایش ۲۰ کار آخر صف. شناسهٔ ابتدای هر خط برای cancel استفاده می‌شود.',
+    '',
+    '/queue failed',
+    'نمایش کارهای ناموفق یا نیازمند بررسی.',
+    '',
+    '/cancel JOB_ID',
+    'لغو یک پیام ارسال‌نشده با شناسهٔ صف.',
+    'مثال: /cancel 550e8400-e29b-41d4-a716-446655440000',
+    '',
+    'نکته: ارسال از Message Yourself فعلاً فقط پیام متنی را پشتیبانی می‌کند.',
+  ].join('\n');
+}
+
 export function createControllerExecutor(
   context: AppContext,
   groups: WhatsAppGroupService,
 ): (command: string) => Promise<string> {
   return async (command: string): Promise<string> => {
     const [head, ...rest] = command.trim().split(/\s+/);
+    if (head === '/help') return helpText();
     if (head === '/status') return JSON.stringify(context.health.report(), null, 2);
     if (head === '/queue') return queueLines(context, rest[0] === 'failed');
     if (head === '/groups' && rest[0] === 'refresh') {
       const count = await groups.refresh('self-controller');
-      return `Refreshed ${count} groups. Newly discovered groups remain disabled.`;
+      return `${count} گروه به‌روزرسانی شد. گروه‌های جدید تا اجرای /groups allow غیرفعال می‌مانند.\n\nبرای دیدن فهرست: /groups`;
+    }
+    if (head === '/groups' && rest[0] === 'alias' && rest[1] && rest[2]) {
+      const destination = context.destinations.setAlias(rest[1], rest[2], 'self-controller');
+      return `نام کوتاه «${destination.alias}» برای گروه «${destination.subject}» ثبت شد.`;
+    }
+    if (head === '/groups' && rest[0] === 'allow' && rest[1]) {
+      const destination = context.destinations.setEnabled(rest[1], true, 'self-controller');
+      return `✅ ارسال به گروه «${destination.subject}» مجاز شد.\nمثال: /send ${destination.alias ?? destination.jid} متن پیام`;
+    }
+    if (head === '/groups' && rest[0] === 'deny' && rest[1]) {
+      const destination = context.destinations.setEnabled(rest[1], false, 'self-controller');
+      return `⛔ ارسال به گروه «${destination.subject}» غیرفعال شد و پیام‌های ارسال‌نشدهٔ آن لغو شدند.`;
     }
     if (head === '/groups') {
-      return context.destinations
-        .list()
-        .map((group) => `${group.enabled ? 'allowed' : 'denied'}  ${group.alias ?? '-'}  ${group.subject}`)
-        .join('\n');
+      return groupLines(context);
     }
     if (head === '/cancel' && rest[0]) {
       const job = context.jobs.cancel(rest[0], 'self-controller');
@@ -56,14 +147,6 @@ export function createControllerExecutor(
         ? `Duplicate suppressed: ${result.job.uuid}`
         : `Scheduled: ${result.job.uuid}`;
     }
-    return [
-      'Commands:',
-      '/status',
-      '/queue [failed]',
-      '/groups [refresh]',
-      '/send <alias-or-jid> <text>',
-      '/schedule <alias-or-jid> <ISO-8601-with-offset> <text>',
-      '/cancel <job-id>',
-    ].join('\n');
+    return `فرمان شناخته نشد. برای دیدن راهنمای کامل /help را بفرستید.\n\n${helpText()}`;
   };
 }
