@@ -11,6 +11,7 @@ export interface BulkEnqueueRequest {
   type: BatchType;
   destinations: readonly Destination[];
   text: string;
+  force?: boolean;
   actor?: string;
   requestedCount?: number;
   duplicateTargets?: number;
@@ -46,6 +47,7 @@ export class BulkMessageService {
         const result = await this.messages.enqueue({
           destination: destination.jid,
           text: request.text,
+          force: request.force ?? false,
           actor: request.actor ?? 'self-controller',
           batchId,
         });

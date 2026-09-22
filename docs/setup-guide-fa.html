@@ -410,7 +410,7 @@ sudo bash scripts/uninstall.sh --purge</code></pre></div>
         <div class="warning"><strong>زمان‌بندی</strong>مقدار <code>schedule --at</code> باید حتماً <code>Z</code> یا offset صریح داشته باشد؛ مثال معتبر: <code>2026-09-21T12:30:00+03:30</code>.</div>
       </section>
 
-      <section id="operations" data-search="فرمان ارسال schedule queue status audit dry run عملیات">
+      <section id="operations" data-search="فرمان ارسال sendall sendmulti sendset groupset schedule queue status audit dry run عملیات">
         <div class="kicker">کار روزمره</div>
         <h2>فرمان‌های پرکاربرد</h2>
         <p>بعد از <code>npm link</code> در ویندوز از <code>wts</code> و در سرور از پیشوند <code>sudo -u sajadbot-wa wts --config /etc/sajadbot-whatsapp/bot.env</code> استفاده کنید. alias قدیمی همچنان کار می‌کند.</p>
@@ -419,6 +419,16 @@ sudo bash scripts/uninstall.sh --purge</code></pre></div>
 npm run dev -- send operations --file .\photo.jpg --caption "Site photo"
 npm run dev -- send operations --file .\report.pdf --caption "Report" --filename report.pdf
 npm run dev -- schedule operations --at "2026-09-21T12:30:00+03:30" --text "Scheduled update"</code></pre></div>
+        <h3>مجموعهٔ گروه‌ها و ارسال گروهی از ترمینال</h3>
+        <div class="codebox"><pre><code>npm run dev -- groupset create customers
+npm run dev -- groupset add customers shop1 shop2,shop3
+npm run dev -- groupset show customers
+
+npm run dev -- sendmulti shop1,shop2 --text "پیام برای چند گروه"
+npm run dev -- sendall --text "پیام برای همهٔ گروه‌های مجاز"
+npm run dev -- sendset customers --text "پیام برای مجموعهٔ customers"
+npm run dev -- batch BATCH_UUID</code></pre></div>
+        <p>هر مقصد به یک job مستقل در صف تبدیل می‌شود و Worker فاصلهٔ <code>SEND_INTERVAL_MS</code>، retry و وضعیت هر گروه را جداگانه رعایت می‌کند. فرمان‌های bulk در CLI فعلاً متنی هستند و گزینهٔ <code>--text</code> برای آن‌ها اجباری است.</p>
         <h3>مشاهده و حل وضعیت صف</h3>
         <div class="codebox"><pre><code>npm run dev -- queue list
 npm run dev -- queue pending
@@ -440,7 +450,7 @@ npm run smoke:retry</code></pre></div>
         <p>Dry-run تمام مراحل validation، allowlist، staging، hashing، idempotency، queue، audit و logging را اجرا می‌کند؛ اما socket واتساپ نمی‌سازد و job را با شناسهٔ واضح <code>dryrun:...</code> به وضعیت <code>DRY_RUN</code> می‌برد.</p>
       </section>
 
-      <section id="cli-reference" data-search="مرجع کامل cli wts command option install check update auth groups send schedule queue audit time help">
+      <section id="cli-reference" data-search="مرجع کامل cli wts command option install check update auth groups groupset send sendall sendmulti sendset batch schedule queue audit time help">
         <div class="kicker">مرجع CLI</div>
         <h2>تمام فرمان‌های <code>wts</code></h2>
         <p>قالب کلی اجرای برنامه <code>wts [گزینه‌های عمومی] &lt;command&gt; [گزینه‌های command]</code> است. روی سرور production تقریباً همیشه فایل تنظیمات واقعی را صریحاً بدهید:</p>
@@ -448,7 +458,7 @@ npm run smoke:retry</code></pre></div>
 
 # فرمان update باید با root اجرا شود
 sudo wts update</code></pre></div>
-        <div class="warning"><strong><code>wts check</code> را بدون <code>--config</code> از مسیر دلخواه اجرا نکنید.</strong>در آن حالت برنامه ممکن است <code>.env</code> یا مسیرهای پیش‌فرض همان پوشه را استفاده کند و گزارشی از دیتابیس اشتباه نشان دهد.</div>
+        <div class="warning"><strong>فرمان‌های runtime را بدون <code>--config</code> از مسیر دلخواه اجرا نکنید.</strong>فرمان‌هایی مانند <code>check</code>، <code>status</code>، <code>groupset</code> و <code>sendall</code> در آن حالت ممکن است <code>.env</code> یا مسیرهای پیش‌فرض همان پوشه را استفاده کنند و دیتابیس اشتباهی مانند <code>/opt/sajadbot-whatsapp/data/app.db</code> را بسازند یا بخوانند. دیتابیس production در <code>/var/lib/sajadbot-whatsapp/app.db</code> است. استثنا <code>sudo wts update</code> است که فرمان deployment بوده و config runtime نمی‌خواهد.</div>
 
         <h3>گزینه‌های عمومی</h3>
         <div class="table-wrap"><table>
@@ -502,19 +512,38 @@ sudo wts update</code></pre></div>
           </tbody>
         </table></div>
 
+        <h3>مجموعه‌های پایدار گروه‌ها</h3>
+        <p>نام set نسبت به بزرگی حروف حساس نیست، به lowercase تبدیل می‌شود و باید ۱ تا ۶۴ کاراکتر شامل حروف انگلیسی، عدد، <code>_</code> یا <code>-</code> باشد. اعضا با JID اصلی ذخیره می‌شوند؛ تغییر alias یا subject عضویت را خراب نمی‌کند.</p>
+        <div class="table-wrap"><table>
+          <thead><tr><th>فرمان</th><th>کاربرد</th><th>نمونه</th></tr></thead>
+          <tbody>
+            <tr><td><code>wts groupset create NAME</code></td><td>یک مجموعهٔ خالی و پایدار می‌سازد.</td><td><code>wts -c .env groupset create customers</code></td></tr>
+            <tr><td><code>wts groupset add NAME TARGET...</code></td><td>alias یا JIDها را به set اضافه می‌کند. ورودی فاصله‌ای و comma-separated هر دو پذیرفته می‌شوند و اگر یک target نامعتبر باشد هیچ تغییری اعمال نمی‌شود.</td><td><code>wts -c .env groupset add customers shop1 shop2,shop3</code></td></tr>
+            <tr><td><code>wts groupset remove NAME TARGET...</code></td><td>گروه‌ها را از set حذف می‌کند؛ خود گروه و allowlist تغییر نمی‌کنند.</td><td><code>wts -c .env groupset remove customers shop2</code></td></tr>
+            <tr><td><code>wts groupset list</code></td><td>همهٔ setها و تعداد اعضای آن‌ها را نشان می‌دهد.</td><td><code>wts -c .env groupset list</code></td></tr>
+            <tr><td><code>wts groupset show NAME</code></td><td>اعضا و وضعیت فعلی هر مقصد را نمایش می‌دهد.</td><td><code>wts -c .env groupset show customers</code></td></tr>
+            <tr><td><code>wts groupset delete NAME</code></td><td>set و عضویت‌هایش را حذف می‌کند؛ گروه‌ها و jobهای قبلی حذف نمی‌شوند.</td><td><code>wts -c .env groupset delete customers</code></td></tr>
+          </tbody>
+        </table></div>
+
         <h3>ارسال فوری و زمان‌بندی</h3>
         <div class="table-wrap"><table>
           <thead><tr><th>فرمان/گزینه</th><th>معنی</th><th>نمونه</th></tr></thead>
           <tbody>
             <tr><td><code>wts send DESTINATION</code></td><td>پیام را برای مقصد مجاز در صف فوری قرار می‌دهد.</td><td><code>wts -c .env send operations --text "Deployment complete"</code></td></tr>
             <tr><td><code>wts schedule DESTINATION --at TIMESTAMP</code></td><td>پیام را برای زمان دارای <code>Z</code> یا offset صریح در صف می‌گذارد.</td><td><code>wts -c .env schedule operations --at "2026-09-23T20:00:00+03:30" --text "جلسه شروع شد"</code></td></tr>
+            <tr><td><code>wts sendmulti TARGET... --text MESSAGE</code></td><td>پیام متنی را برای فهرست صریح alias/JIDها صف می‌کند. همهٔ targetها پیش از ساخت اولین job اعتبارسنجی می‌شوند.</td><td><code>wts -c .env sendmulti shop1,shop2 --text "سلام"</code></td></tr>
+            <tr><td><code>wts sendall --text MESSAGE</code></td><td>از تمام گروه‌های فعلی فقط مقصدهای مجاز و قابل‌ارسال را snapshot و صف می‌کند.</td><td><code>wts -c .env sendall --text "اطلاعیه"</code></td></tr>
+            <tr><td><code>wts sendset NAME --text MESSAGE</code></td><td>برای اعضای مجاز و موجود set صف می‌سازد و اعضای disabled، unsendable یا missing را گزارش و رد می‌کند.</td><td><code>wts -c .env sendset customers --text "سلام"</code></td></tr>
+            <tr><td><code>wts batch BATCH_ID</code></td><td>نوع batch، تعداد مقصد و شمار jobها در هر وضعیت را نشان می‌دهد.</td><td><code>wts -c .env batch BATCH_UUID</code></td></tr>
             <tr><td><code>--text MESSAGE</code></td><td>متن پیام بدون media.</td><td><code>--text "متن پیام"</code></td></tr>
             <tr><td><code>--file PATH</code></td><td>ارسال image، video، document یا audio؛ فایل پیش از صف به storage برنامه کپی می‌شود.</td><td><code>--file ./report.pdf</code></td></tr>
             <tr><td><code>--caption TEXT</code></td><td>caption برای image/video/document. برای audio قابل اتکا نیست.</td><td><code>--file ./photo.jpg --caption "تصویر پروژه"</code></td></tr>
             <tr><td><code>--filename NAME</code></td><td>نام نمایشی document در WhatsApp.</td><td><code>--file ./report.pdf --filename report.pdf</code></td></tr>
-            <tr><td><code>--force</code></td><td>فقط برای تکرار عمدی؛ duplicate suppression را برای درخواست تازه دور می‌زند.</td><td><code>wts -c .env send operations --text "Repeat" --force</code></td></tr>
+            <tr><td><code>--force</code></td><td>فقط برای تکرار عمدی؛ duplicate suppression را برای درخواست تازه دور می‌زند. برای <code>send</code>، <code>schedule</code> و هر سه فرمان bulk در دسترس است.</td><td><code>wts -c .env sendall --text "Repeat" --force</code></td></tr>
           </tbody>
         </table></div>
+        <div class="note"><strong>محدودیت media در bulk CLI</strong><code>sendall</code>، <code>sendmulti</code> و <code>sendset</code> فعلاً فقط <code>--text</code> می‌پذیرند. برای فایل، تصویر، ویدئو، سند یا صوت از <code>wts send DESTINATION --file ...</code> استفاده کنید.</div>
 
         <h3>مشاهده و مدیریت صف</h3>
         <div class="table-wrap"><table>

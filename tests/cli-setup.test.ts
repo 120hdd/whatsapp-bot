@@ -22,16 +22,29 @@ describe('wts setup and diagnostics CLI', () => {
   it('advertises commands and command-specific help', () => {
     const rootHelp = runCli(['--help']);
     const installHelp = runCli(['install', '--help']);
+    const groupSetHelp = runCli(['groupset', '--help']);
+    const sendAllHelp = runCli(['sendall', '--help']);
 
     expect(rootHelp.status, rootHelp.stderr).toBe(0);
     expect(rootHelp.stdout).toContain('Usage: wts');
     expect(rootHelp.stdout).toContain('install');
     expect(rootHelp.stdout).toContain('check');
     expect(rootHelp.stdout).toContain('update');
+    expect(rootHelp.stdout).toContain('groupset');
+    expect(rootHelp.stdout).toContain('sendall');
+    expect(rootHelp.stdout).toContain('sendmulti');
+    expect(rootHelp.stdout).toContain('sendset');
+    expect(rootHelp.stdout).toContain('batch');
     expect(installHelp.status, installHelp.stderr).toBe(0);
     expect(installHelp.stdout).toContain('--yes');
     expect(installHelp.stdout).toContain('--skip-login');
     expect(installHelp.stdout).toContain('--production');
+    expect(groupSetHelp.status, groupSetHelp.stderr).toBe(0);
+    expect(groupSetHelp.stdout).toContain('add <name> <targets...>');
+    expect(groupSetHelp.stdout).toContain('remove <name> <targets...>');
+    expect(sendAllHelp.status, sendAllHelp.stderr).toBe(0);
+    expect(sendAllHelp.stdout).toContain('--text <message>');
+    expect(sendAllHelp.stdout).toContain('--force');
   });
 
   it('installs with safe defaults and reports a healthy offline setup', () => {

@@ -159,7 +159,22 @@ Supported intents are text, image, video, document, and audio. Audio captioning 
 
 Submitting an active or already delivered equivalent request returns the existing job. Use `--force` only for an intentional duplicate.
 
-Bulk sending is intentionally available through the verified Message Yourself controller. Each destination becomes a separate normal queue job; there is no multi-destination delivery job or direct Baileys send path. Consequently, every destination keeps its own idempotency, retry, failure, and delivery state, and `SEND_INTERVAL_MS` continues to pace the worker normally.
+Bulk text sending and persistent group sets are available from both the CLI and the verified Message Yourself controller:
+
+```bash
+npm run dev -- groupset create customers
+npm run dev -- groupset add customers shop1 shop2,shop3
+npm run dev -- groupset show customers
+
+npm run dev -- sendmulti shop1,shop2 --text "Hello selected groups"
+npm run dev -- sendall --text "Hello every allowed group"
+npm run dev -- sendset customers --text "Hello customer groups"
+npm run dev -- batch BATCH_UUID
+```
+
+`sendmulti` validates every explicit target atomically; one invalid, disabled, or unsendable target aborts the whole command before any job is queued. `sendall` snapshots all currently allowed and sendable groups. `sendset` skips disabled, unsendable, or missing set members. Add `--force` only when intentionally repeating an otherwise idempotent bulk message.
+
+Each destination becomes a separate normal queue job; there is no multi-destination delivery job or direct Baileys send path. Consequently, every destination keeps its own idempotency, retry, failure, and delivery state, and `SEND_INTERVAL_MS` continues to pace the worker normally. Bulk CLI commands currently accept text through the required `--text` option; use the ordinary `send` command for media.
 
 ## Queue and recovery
 
@@ -282,6 +297,16 @@ sudo -u sajadbot-wa wts --config /etc/sajadbot-whatsapp/bot.env check
 sudo systemctl start sajadbot-whatsapp
 sudo systemctl status sajadbot-whatsapp
 ```
+
+Production operational commands may be run from any directory, but they must use the production service account and configuration file. Put the global `-c`/`--config` option before the command:
+
+```bash
+sudo -u sajadbot-wa wts -c /etc/sajadbot-whatsapp/bot.env status
+sudo -u sajadbot-wa wts -c /etc/sajadbot-whatsapp/bot.env groupset list
+sudo -u sajadbot-wa wts -c /etc/sajadbot-whatsapp/bot.env sendall --text "Service notice"
+```
+
+Do not run a bare `sudo wts check`, `sudo wts status`, or send command from `/opt/sajadbot-whatsapp`: without `--config`, relative defaults are resolved from the current directory and can create or inspect `/opt/sajadbot-whatsapp/data/app.db` instead of the live `/var/lib/sajadbot-whatsapp/app.db`. `sudo wts update` is the exception because it is a root-only deployment command and does not load the runtime database configuration.
 
 The layout is:
 

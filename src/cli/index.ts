@@ -6,6 +6,7 @@ import { createAppContext, type AppContext } from '../app-context.js';
 import { ensureApplicationDirectories, loadConfig } from '../config/load.js';
 import type { AppConfig } from '../config/schema.js';
 import { runDaemon } from '../daemon.js';
+import { normalizeGroupSetName } from '../domain/group-sets.js';
 import { ProcessLock } from '../lock/process-lock.js';
 import { DryRunTransport } from '../messaging/dry-run-transport.js';
 import { QueueWorker } from '../messaging/queue-worker.js';
@@ -13,6 +14,7 @@ import { formatInTimezone, parseSchedule } from '../messaging/scheduler.js';
 import { ConnectionManager } from '../whatsapp/connection-manager.js';
 import { WhatsAppGroupService } from '../whatsapp/group-service.js';
 import { isGroupJid, normalizeJid } from '../whatsapp/jid.js';
+import { TargetResolver, type TargetIssue } from '../whatsapp/target-resolver.js';
 import { failedCheckReport, formatCheckReport, runSystemCheck } from './check-command.js';
 import { runInstallWizard } from './install-command.js';
 import { runUpdate } from './update-command.js';
@@ -72,6 +74,38 @@ function publicJob(job: ReturnType<AppContext['jobs']['get']>, includeContent = 
     createdAt: job.createdAt,
     updatedAt: job.updatedAt,
   };
+}
+
+function targetInputs(values: readonly string[]): string[] {
+  return values.flatMap((value) => value.split(',')).map((value) => value.trim()).filter(Boolean);
+}
+
+function targetIssueMessage(issues: readonly TargetIssue[]): string {
+  return issues.map((issue) => `${issue.input}: ${issue.reason}`).join(', ');
+}
+
+function requireGroupSetName(value: string): string {
+  return normalizeGroupSetName(value);
+}
+
+function requireGroupSet(context: AppContext, name: string) {
+  const groupSet = context.groupSets.get(name);
+  if (!groupSet) throw new Error(`Group set not found: ${name}`);
+  return groupSet;
+}
+
+function bulkOutput(
+  result: Awaited<ReturnType<AppContext['bulkMessages']['enqueue']>>,
+  details: Readonly<Record<string, unknown>> = {},
+): void {
+  output({
+    ...details,
+    targets: result.targets,
+    queued: result.queued,
+    duplicates: result.duplicateJobs + result.duplicateTargets,
+    failed: result.failed,
+    batchId: result.batchId,
+  });
 }
 
 async function withConnectedManager<T>(
@@ -353,6 +387,160 @@ groups
       output(context.destinations.resolve(normalized));
     });
   });
+
+const groupSet = program
+  .command('groupset')
+  .alias('group-sets')
+  .description('Create and manage persistent sets of WhatsApp groups');
+groupSet.command('list').action(async () => {
+  await withContext((context) => output(context.groupSets.list()));
+});
+groupSet.command('create <name>').action(async (rawName: string) => {
+  await withContext((context) => {
+    const name = requireGroupSetName(rawName);
+    const created = context.groupSets.create(name, 'cli');
+    if (!created) throw new Error(`Group set already exists: ${name}`);
+    output(created);
+  });
+});
+groupSet.command('show <name>').action(async (rawName: string) => {
+  await withContext((context) => {
+    const name = requireGroupSetName(rawName);
+    const set = requireGroupSet(context, name);
+    output({ ...set, members: context.groupSets.members(name) ?? [] });
+  });
+});
+for (const action of ['add', 'remove'] as const) {
+  groupSet.command(`${action} <name> <targets...>`).action(async (rawName: string, rawTargets: string[]) => {
+    await withContext((context) => {
+      const name = requireGroupSetName(rawName);
+      requireGroupSet(context, name);
+      const inputs = targetInputs(rawTargets);
+      if (!inputs.length) throw new Error(`At least one target is required for groupset ${action}`);
+      const resolved = new TargetResolver(context.destinations).resolveTargets(inputs, false);
+      if (resolved.issues.length) {
+        throw new Error(`Group set ${action} aborted; invalid targets: ${targetIssueMessage(resolved.issues)}`);
+      }
+      const jids = resolved.destinations.map((destination) => destination.jid);
+      const change = action === 'add'
+        ? context.groupSets.addMembers(name, jids, 'cli')
+        : context.groupSets.removeMembers(name, jids, 'cli');
+      if (!change) throw new Error(`Group set not found: ${name}`);
+      output({
+        groupSet: name,
+        [action === 'add' ? 'added' : 'removed']: change.changed,
+        [action === 'add' ? 'alreadyPresent' : 'notPresent']: change.unchanged + resolved.duplicates,
+      });
+    });
+  });
+}
+groupSet.command('delete <name>').action(async (rawName: string) => {
+  await withContext((context) => {
+    const name = requireGroupSetName(rawName);
+    if (!context.groupSets.delete(name, 'cli')) throw new Error(`Group set not found: ${name}`);
+    output({ groupSet: name, deleted: true });
+  });
+});
+
+program
+  .command('sendall')
+  .alias('send-all')
+  .description('Queue a text message for every currently allowed and sendable group')
+  .requiredOption('--text <message>')
+  .option('--force', 'allow intentional duplicates for every destination')
+  .action(async (options: { text: string; force?: boolean }) => {
+    await withContext(async (context) => {
+      const snapshot = new TargetResolver(context.destinations).snapshotAllowed();
+      if (!snapshot.destinations.length) throw new Error('No allowed and sendable groups were found');
+      const result = await context.bulkMessages.enqueue({
+        type: 'sendall',
+        destinations: snapshot.destinations,
+        text: options.text,
+        force: options.force ?? false,
+        actor: 'cli',
+        requestedCount: snapshot.requested,
+        duplicateTargets: snapshot.duplicates,
+        skipped: snapshot.skipped,
+      });
+      bulkOutput(result, { skipped: snapshot.skipped });
+    });
+  });
+
+program
+  .command('sendmulti <targets...>')
+  .alias('send-multi')
+  .description('Queue one text message for an explicit list of allowed groups')
+  .requiredOption('--text <message>')
+  .option('--force', 'allow intentional duplicates for every destination')
+  .action(async (rawTargets: string[], options: { text: string; force?: boolean }) => {
+    await withContext(async (context) => {
+      const inputs = targetInputs(rawTargets);
+      const resolved = new TargetResolver(context.destinations).resolveTargets(inputs, true);
+      if (resolved.issues.length) {
+        throw new Error(`Multi-send aborted; invalid targets: ${targetIssueMessage(resolved.issues)}`);
+      }
+      if (!resolved.destinations.length) throw new Error('At least one destination is required');
+      const result = await context.bulkMessages.enqueue({
+        type: 'sendmulti',
+        destinations: resolved.destinations,
+        text: options.text,
+        force: options.force ?? false,
+        actor: 'cli',
+        requestedCount: inputs.length,
+        duplicateTargets: resolved.duplicates,
+      });
+      bulkOutput(result);
+    });
+  });
+
+program
+  .command('sendset <name>')
+  .alias('send-set')
+  .description('Queue a text message for every eligible member of a persistent group set')
+  .requiredOption('--text <message>')
+  .option('--force', 'allow intentional duplicates for every destination')
+  .action(async (rawName: string, options: { text: string; force?: boolean }) => {
+    await withContext(async (context) => {
+      const name = requireGroupSetName(rawName);
+      const members = context.groupSets.members(name);
+      if (!members) throw new Error(`Group set not found: ${name}`);
+      const present = members.filter((member) => member.destination !== null);
+      const resolved = new TargetResolver(context.destinations).resolveTargets(
+        present.map((member) => member.jid),
+        true,
+      );
+      const disabled = resolved.issues.filter(
+        (issue) => issue.reason === 'disabled' || issue.reason === 'not sendable',
+      ).length;
+      const missing = members.length - present.length + resolved.issues.length - disabled;
+      if (!resolved.destinations.length) throw new Error(`No eligible groups in set: ${name}`);
+      const result = await context.bulkMessages.enqueue({
+        type: 'sendset',
+        destinations: resolved.destinations,
+        text: options.text,
+        force: options.force ?? false,
+        actor: 'cli',
+        requestedCount: members.length,
+        duplicateTargets: resolved.duplicates,
+        skipped: disabled + missing,
+      });
+      bulkOutput(result, {
+        groupSet: name,
+        members: members.length,
+        eligible: resolved.destinations.length,
+        disabled,
+        missing,
+      });
+    });
+  });
+
+program.command('batch <id>').description('Show persisted status counts for a bulk-send batch').action(async (id: string) => {
+  await withContext((context) => {
+    const batch = context.batches.get(id);
+    if (!batch) throw new Error(`Batch not found: ${id}`);
+    output(batch);
+  });
+});
 
 program
   .command('send <destination>')
