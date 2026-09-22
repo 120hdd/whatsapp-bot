@@ -116,4 +116,38 @@ export const migrations: readonly Migration[] = [
         );
     `,
   },
+  {
+    version: 3,
+    name: 'group_sets_and_message_batches',
+    sql: `
+      CREATE TABLE group_sets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL COLLATE NOCASE UNIQUE,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      CREATE TABLE group_set_members (
+        group_set_id INTEGER NOT NULL REFERENCES group_sets(id) ON DELETE CASCADE,
+        destination_jid TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        UNIQUE(group_set_id, destination_jid)
+      );
+
+      CREATE INDEX ix_group_set_members_destination
+        ON group_set_members(destination_jid);
+
+      CREATE TABLE message_batches (
+        id TEXT PRIMARY KEY,
+        type TEXT NOT NULL CHECK (type IN ('sendall','sendmulti','sendset')),
+        target_count INTEGER NOT NULL CHECK (target_count >= 0),
+        created_at TEXT NOT NULL
+      );
+
+      ALTER TABLE message_jobs
+        ADD COLUMN batch_id TEXT REFERENCES message_batches(id) ON DELETE SET NULL;
+
+      CREATE INDEX ix_jobs_batch ON message_jobs(batch_id);
+    `,
+  },
 ] as const;

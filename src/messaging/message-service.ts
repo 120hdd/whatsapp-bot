@@ -21,6 +21,7 @@ export interface QueueMessageRequest {
   force?: boolean;
   actor?: string;
   options?: Readonly<Record<string, unknown>>;
+  batchId?: string;
 }
 
 export interface QueueMessageResult {
@@ -100,6 +101,7 @@ export class MessageService {
           idempotencyKey,
           optionsJson: JSON.stringify(options),
           requestedBy: request.actor ?? 'cli',
+          batchId: request.batchId ?? null,
         },
         request.actor ?? 'cli',
       );

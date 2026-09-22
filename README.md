@@ -159,6 +159,8 @@ Supported intents are text, image, video, document, and audio. Audio captioning 
 
 Submitting an active or already delivered equivalent request returns the existing job. Use `--force` only for an intentional duplicate.
 
+Bulk sending is intentionally available through the verified Message Yourself controller. Each destination becomes a separate normal queue job; there is no multi-destination delivery job or direct Baileys send path. Consequently, every destination keeps its own idempotency, retry, failure, and delivery state, and `SEND_INTERVAL_MS` continues to pace the worker normally.
+
 ## Queue and recovery
 
 ```bash
@@ -204,7 +206,34 @@ npm run smoke:retry
 
 ## Optional Message Yourself controller
 
-Set `SELF_CONTROLLER_ENABLED=true` only if desired. CLI remains authoritative. Supported commands are `/help`, `/status`, `/queue [failed]`, `/groups`, `/groups refresh`, `/groups alias`, `/groups allow`, `/groups deny`, `/send`, `/schedule`, and `/cancel`. The in-chat help walks the linked-account owner through group discovery, aliasing, explicit allowlisting, and sending a first text message.
+Set `SELF_CONTROLLER_ENABLED=true` only if desired. The Message Yourself controller is the primary interface for the commands below; the CLI remains available for operations and recovery. The in-chat help walks the linked-account owner through group discovery, aliasing, explicit allowlisting, and sending a first text message.
+
+Single and bulk sends:
+
+```text
+/send family سلام
+/sendmulti family,work,vip سلام
+/sendall سلام
+```
+
+`/sendmulti` atomically validates every explicitly selected alias or group JID before it queues anything. An unknown, malformed, non-group, disabled, or unsendable target aborts the command. `/sendall` snapshots all currently known groups and queues only those currently allowed and sendable. Duplicate target JIDs and existing idempotent jobs are summarized instead of producing one chat reply per destination.
+
+Persistent group sets:
+
+```text
+/groupset create customers
+/groupset add customers shop1 shop2 shop3
+/groupset add customers shop4,shop5
+/groupset show customers
+/groupset list
+/groupset remove customers shop2
+/sendset customers سلام
+/groupset delete customers
+```
+
+Set names are case-insensitive, normalized to lowercase, 1–64 characters, and limited to letters, numbers, `_`, and `-`. Membership is stored by canonical WhatsApp group JID, so alias and subject changes do not break a set. Membership persists in SQLite across daemon restarts and remains intact when a group is disabled. `/sendset` snapshots the set, skips currently disabled/unsendable or missing members, and queues one independent job for each eligible JID.
+
+Other controller commands remain available: `/help`, `/status`, `/queue [failed]`, `/groups`, `/groups refresh`, `/groups alias`, `/groups allow`, `/groups deny`, `/schedule`, `/cancel`, and `/batch BATCH_ID`. The optional `/batch` command reports the current persisted job-state counts for a bulk-send batch.
 
 Commands are accepted only for a current `notify` event that is `fromMe`, targets the authenticated account's verified PN JID or LID self-chat, has a matching participant when present, is not forwarded, is not historical, and has not been processed before. Processed IDs are persistent. Groups, arbitrary DMs, replayed history, forwarded commands, and identity mismatches are ignored.
 

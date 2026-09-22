@@ -36,6 +36,7 @@ interface JobRow {
   started_at: string | null;
   sent_at: string | null;
   remote_message_id: string | null;
+  batch_id: string | null;
 }
 
 function toJob(row: JobRow): QueueJob {
@@ -64,6 +65,7 @@ function toJob(row: JobRow): QueueJob {
     startedAt: row.started_at,
     sentAt: row.sent_at,
     remoteMessageId: row.remote_message_id,
+    batchId: row.batch_id,
   };
 }
 
@@ -89,8 +91,8 @@ export class JobRepository {
           `INSERT INTO message_jobs(
             uuid, destination_jid, payload_type, text, media_path, media_hash, media_mime,
             filename, scheduled_at, status, max_attempts, idempotency_key, options_json,
-            requested_by, created_at, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            requested_by, batch_id, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         ).run(
           job.uuid,
           job.destinationJid,
@@ -106,6 +108,7 @@ export class JobRepository {
           job.idempotencyKey,
           job.optionsJson,
           job.requestedBy,
+          job.batchId,
           now,
           now,
         );
@@ -117,6 +120,7 @@ export class JobRepository {
             destinationJid: job.destinationJid,
             payloadType: job.payloadType,
             idempotencyKey: job.idempotencyKey,
+            batchId: job.batchId,
           },
           now,
         });
