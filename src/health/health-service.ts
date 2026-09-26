@@ -21,6 +21,7 @@ export interface HealthReport {
   lastConnectionAt: string | null;
   dryRun: boolean;
   workerState: string;
+  controllerState: string;
 }
 
 export class HealthService {
@@ -52,6 +53,10 @@ export class HealthService {
       lastConnectionAt: this.state.get('last_connection_at'),
       dryRun: this.config.dryRun,
       workerState: this.state.get('worker_state') ?? 'STOPPED',
+      // DISABLED = feature off, DETACHED = enabled without a live socket,
+      // ATTACHED = listening on the current socket. Reported but not folded
+      // into `healthy`: outbound delivery is unaffected by a deaf controller.
+      controllerState: this.state.get('controller_state') ?? 'DISABLED',
     };
   }
 }

@@ -55,6 +55,7 @@ export class ConnectionManager {
   private reconnectAttempt = 0;
   private reconnectTimer: NodeJS.Timeout | null = null;
   private lastOptions: ConnectOptions = {};
+  private readonly socketListeners = new Set<(socket: WASocket | null) => void>();
 
   public constructor(
     private readonly authRepository: AuthRepository,
@@ -73,6 +74,24 @@ export class ConnectionManager {
     return this.socket;
   }
 
+  /**
+   * Notify on every socket replacement, including reconnects. The listener is
+   * invoked immediately with the current socket, so callers that attach to a
+   * live socket can register without racing the initial connect.
+   */
+  public onSocketChange(listener: (socket: WASocket | null) => void): () => void {
+    this.socketListeners.add(listener);
+    listener(this.socket);
+    return () => {
+      this.socketListeners.delete(listener);
+    };
+  }
+
+  private setSocket(socket: WASocket | null): void {
+    this.socket = socket;
+    for (const listener of this.socketListeners) listener(socket);
+  }
+
   public async connect(options: ConnectOptions = {}): Promise<void> {
     if (this.stateValue === 'CONNECTED' && this.socket) return;
     if (this.connectPromise) return this.connectPromise;
@@ -89,7 +108,7 @@ export class ConnectionManager {
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
     this.reconnectTimer = null;
     const socket = this.socket;
-    this.socket = null;
+    this.setSocket(null);
     this.generation += 1;
     if (socket) {
       await socket.end(undefined);
@@ -106,7 +125,7 @@ export class ConnectionManager {
       await this.socket.logout();
       void this.socket.end(undefined);
     }
-    this.socket = null;
+    this.setSocket(null);
     this.authRepository.clear();
     this.stateRepository.remove('own_jid');
     this.stateRepository.remove('own_lid');
@@ -127,7 +146,7 @@ export class ConnectionManager {
       syncFullHistory: false,
       generateHighQualityLinkPreview: false,
     });
-    this.socket = socket;
+    this.setSocket(socket);
     socket.ev.on('creds.update', () => {
       void saveCreds().catch((error: unknown) => {
         this.logger.error({ err: error }, 'auth_credentials_persist_failed');
@@ -162,7 +181,7 @@ export class ConnectionManager {
             status === DisconnectReason.badSession ||
             status === DisconnectReason.multideviceMismatch ||
             status === DisconnectReason.forbidden;
-          this.socket = null;
+          this.setSocket(null);
           if (restartRequired && !settled && !this.stopped && protocolRestartCount < 2) {
             settled = true;
             this.setState('RECONNECTING');

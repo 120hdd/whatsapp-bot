@@ -22,6 +22,7 @@ export async function runDaemon(config: AppConfig): Promise<DaemonExit> {
   const context = createAppContext(config);
   let connection: ConnectionManager | null = null;
   let controller: SelfChatController | null = null;
+  let releaseController: (() => void) | null = null;
   let worker: QueueWorker | null = null;
   let workerTask: Promise<void> | null = null;
   try {
@@ -68,18 +69,28 @@ export async function runDaemon(config: AppConfig): Promise<DaemonExit> {
         context.logger.warn({ err: error }, 'group_refresh_failed_existing_cache_preserved');
       }
       transport = new BaileysTransport(() => connection?.currentSocket ?? null);
-      if (config.selfControllerEnabled && connection.currentSocket) {
+      if (config.selfControllerEnabled) {
         const ownJids = [context.state.get('own_jid'), context.state.get('own_lid')].filter(
           (value): value is string => Boolean(value),
         );
-        controller = new SelfChatController(
-          connection.currentSocket,
+        const selfController = new SelfChatController(
           ownJids,
           context.controller,
           createControllerExecutor(context, groups),
           context.logger,
         );
-        controller.register();
+        controller = selfController;
+        // Reconnects replace the socket object, so the controller has to be
+        // moved onto each replacement rather than bound to the first one.
+        releaseController = connection.onSocketChange((socket) => {
+          if (socket) {
+            selfController.attach(socket);
+            context.state.set('controller_state', 'ATTACHED');
+          } else {
+            selfController.detach();
+            context.state.set('controller_state', 'DETACHED');
+          }
+        });
       }
     }
 
@@ -99,7 +110,9 @@ export async function runDaemon(config: AppConfig): Promise<DaemonExit> {
     await workerTask;
     return 'STOPPED';
   } finally {
-    controller?.unregister();
+    if (controller) context.state.set('controller_state', 'DETACHED');
+    releaseController?.();
+    controller?.detach();
     worker?.requestStop();
     if (workerTask) await workerTask.catch(() => undefined);
     await connection?.disconnect();
