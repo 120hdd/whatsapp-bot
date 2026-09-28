@@ -28,7 +28,7 @@ export function createLogger(config: Pick<AppConfig, 'logLevel'>): Logger {
       err: pino.stdSerializers.err,
       error: pino.stdSerializers.err,
     },
-  });
+  }, process.stderr);
 }
 
 export function createSilentLogger(): Logger {

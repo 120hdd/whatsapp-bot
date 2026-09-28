@@ -15,6 +15,7 @@ export interface IdempotencyInput {
   filename: string | null;
   options: Readonly<Record<string, unknown>>;
   forceNonce?: string;
+  dryRun?: boolean;
 }
 
 export function buildIdempotencyKey(input: IdempotencyInput): string {
@@ -27,6 +28,7 @@ export function buildIdempotencyKey(input: IdempotencyInput): string {
     filename: input.filename,
     options: Object.fromEntries(Object.entries(input.options).sort(([a], [b]) => a.localeCompare(b))),
     forceNonce: input.forceNonce ?? null,
+    ...(input.dryRun ? { dryRun: true } : {}),
   });
   return createHash('sha256').update(canonical).digest('hex');
 }

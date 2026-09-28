@@ -61,6 +61,7 @@ function publicJob(job: ReturnType<AppContext['jobs']['get']>, includeContent = 
   return {
     id: job.uuid,
     status: job.status,
+    dryRun: job.dryRun,
     destinationJid: job.destinationJid,
     payloadType: job.payloadType,
     ...(includeContent ? { text: job.text, mediaPath: job.mediaPath } : {}),
@@ -180,12 +181,14 @@ async function enqueueAndMaybeDryRun(options: {
         context.config,
         context.logger,
       );
-      await worker.processOnce();
+      const processed = await worker.processOnce({ reference: result.job.uuid });
       const finished = context.jobs.get(result.job.uuid);
       output({
-        message: 'DRY RUN ACTIVE — outbound WhatsApp sending is disabled',
+        message: processed
+          ? 'DRY RUN ACTIVE — outbound WhatsApp sending is disabled'
+          : 'DRY RUN ACTIVE — job was not claimed, so nothing was simulated',
         job: publicJob(finished),
-        baileysSendMessageCalls: 0,
+        dryRunTransportCalls: transport.sendCalls.length,
       });
       return;
     }

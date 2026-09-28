@@ -150,4 +150,12 @@ export const migrations: readonly Migration[] = [
       CREATE INDEX ix_jobs_batch ON message_jobs(batch_id);
     `,
   },
+  {
+    version: 4,
+    name: 'persist_job_dry_run_intent',
+    sql: `
+      ALTER TABLE message_jobs
+        ADD COLUMN dry_run INTEGER NOT NULL DEFAULT 0 CHECK (dry_run IN (0, 1));
+    `,
+  },
 ] as const;

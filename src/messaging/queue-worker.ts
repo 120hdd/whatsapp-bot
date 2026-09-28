@@ -14,6 +14,7 @@ import {
   JobRepository,
   StateRepository,
 } from '../db/repositories/index.js';
+import { DryRunTransport } from './dry-run-transport.js';
 import { decideRetry } from './retry-policy.js';
 import type { MessageTransport } from './transport.js';
 
@@ -21,6 +22,7 @@ export class QueueWorker {
   private stopping = false;
   private running = false;
   private lastSendFinishedAt = 0;
+  private readonly simulatedTransport = new DryRunTransport();
 
   public constructor(
     private readonly jobs: JobRepository,
@@ -56,12 +58,15 @@ export class QueueWorker {
     }
   }
 
-  public async processOnce(): Promise<boolean> {
+  /** Processes the next eligible job, or exactly the referenced one when a reference is given. */
+  public async processOnce(options: { reference?: string } = {}): Promise<boolean> {
     if (this.isGloballyPaused()) return false;
     const now = this.clock.now().toISOString();
     this.jobs.promoteDueScheduled(now);
     this.jobs.cancelDisabled();
-    const job = this.jobs.claimNext(now);
+    const job = options.reference
+      ? this.jobs.claimJob(now, options.reference, this.config.dryRun)
+      : this.jobs.claimNext(now, this.config.dryRun);
     if (!job) return false;
     this.logger.info(
       { job_id: job.uuid, destination_jid: job.destinationJid, attempt: job.attemptCount },
@@ -94,7 +99,10 @@ export class QueueWorker {
     }
 
     try {
-      const result = await this.transport.send(asSendableJob(job));
+      const transport = job.dryRun && this.transport.name !== 'dry-run'
+        ? this.simulatedTransport
+        : this.transport;
+      const result = await transport.send(asSendableJob(job));
       if (result.dryRun) {
         this.jobs.transition(job.uuid, 'DRY_RUN', {
           remoteMessageId: result.remoteMessageId,
@@ -107,7 +115,8 @@ export class QueueWorker {
         });
         this.state.set('last_successful_send_at', this.clock.now().toISOString());
       }
-      this.state.set('connectivity', this.transport.name === 'dry-run' ? 'OFFLINE_DRY_RUN' : 'CONNECTED');
+      if (this.transport.name === 'dry-run') this.state.set('connectivity', 'OFFLINE_DRY_RUN');
+      else if (!result.dryRun) this.state.set('connectivity', 'CONNECTED');
       this.logger.info(
         {
           job_id: job.uuid,

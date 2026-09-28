@@ -22,6 +22,7 @@ export interface QueueMessageRequest {
   actor?: string;
   options?: Readonly<Record<string, unknown>>;
   batchId?: string;
+  dryRun?: boolean;
 }
 
 export interface QueueMessageResult {
@@ -62,6 +63,7 @@ export class MessageService {
       throw new Error('Scheduled delivery must be in the future');
     }
     const uuid = randomUUID();
+    const dryRun = request.dryRun ?? this.config.dryRun;
     const scheduleIdentity = request.scheduledAt?.toISOString() ?? 'IMMEDIATE';
     const options = request.options ?? {};
     const payloadType: PayloadType = staged?.payloadType ?? 'text';
@@ -73,6 +75,7 @@ export class MessageService {
       scheduleIdentity,
       filename: request.filename ? (staged?.safeFilename ?? null) : null,
       options,
+      dryRun,
       ...(request.force ? { forceNonce: uuid } : {}),
     });
 
@@ -102,6 +105,7 @@ export class MessageService {
           optionsJson: JSON.stringify(options),
           requestedBy: request.actor ?? 'cli',
           batchId: request.batchId ?? null,
+          dryRun,
         },
         request.actor ?? 'cli',
       );

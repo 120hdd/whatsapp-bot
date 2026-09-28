@@ -75,6 +75,7 @@ export interface QueueJob {
   sentAt: string | null;
   remoteMessageId: string | null;
   batchId: string | null;
+  dryRun: boolean;
 }
 
 export interface NewQueueJob {
@@ -93,6 +94,7 @@ export interface NewQueueJob {
   optionsJson: string;
   requestedBy: string;
   batchId: string | null;
+  dryRun?: boolean;
 }
 
 export interface SendableJob extends QueueJob {

@@ -67,4 +67,26 @@ describe('idempotency and media staging', () => {
     expect(results.filter((result) => !result.duplicate)).toHaveLength(1);
     expect(test.context.jobs.list()).toHaveLength(1);
   });
+
+  it('keeps dry-run and live requests separate while deduplicating each', async () => {
+    test = makeTestContext();
+    addAllowedGroup(test.context, { alias: 'work' });
+    const live = await test.context.messages.enqueue({ destination: 'work', text: 'same' });
+    const dry = await test.context.messages.enqueue({
+      destination: 'work',
+      text: 'same',
+      dryRun: true,
+    });
+    const dryAgain = await test.context.messages.enqueue({
+      destination: 'work',
+      text: 'same',
+      dryRun: true,
+    });
+
+    expect(dry.duplicate).toBe(false);
+    expect(dry.job.uuid).not.toBe(live.job.uuid);
+    expect(dry.job.dryRun).toBe(true);
+    expect(dryAgain.duplicate).toBe(true);
+    expect(dryAgain.job.uuid).toBe(dry.job.uuid);
+  });
 });

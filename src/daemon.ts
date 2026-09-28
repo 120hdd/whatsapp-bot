@@ -19,7 +19,13 @@ export async function runDaemon(config: AppConfig): Promise<DaemonExit> {
   ensureApplicationDirectories(config);
   const lock = new ProcessLock(config.lockPath);
   lock.acquire();
-  const context = createAppContext(config);
+  let context: ReturnType<typeof createAppContext>;
+  try {
+    context = createAppContext(config);
+  } catch (error) {
+    lock.release();
+    throw error;
+  }
   let connection: ConnectionManager | null = null;
   let controller: SelfChatController | null = null;
   let releaseController: (() => void) | null = null;

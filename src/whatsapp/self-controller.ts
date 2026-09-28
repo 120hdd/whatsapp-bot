@@ -64,6 +64,26 @@ export class SelfChatController {
     type: string;
     requestId?: string;
   }): Promise<number> {
+    for (const message of event.messages) {
+      const remoteJid = message.key.remoteJid;
+      if (!message.key.fromMe || !remoteJid || !this.ownJids.some((own) => sameJid(own, remoteJid))) {
+        continue;
+      }
+      const text = messageText(message)?.trim();
+      this.logger.info(
+        {
+          upsert_type: event.type,
+          has_request_id: Boolean(event.requestId),
+          participant_matches_self:
+            !message.key.participant ||
+            this.ownJids.some((own) => sameJid(own, message.key.participant)),
+          message_timestamp: Number(message.messageTimestamp ?? 0),
+          content_types: Object.keys(message.message ?? {}),
+          is_command: text?.startsWith('/') ?? false,
+        },
+        'self_controller_upsert_seen',
+      );
+    }
     if (event.type !== 'notify' || event.requestId) return 0;
     let accepted = 0;
     for (const message of event.messages) {

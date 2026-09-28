@@ -146,4 +146,59 @@ describe('queue worker', () => {
       expect(dryRun.sendCalls).toEqual([created.job.uuid]);
     },
   );
+
+  it('dry-runs only the referenced job and leaves older queued work pending', async () => {
+    test = makeTestContext({ dryRun: true });
+    addAllowedGroup(test.context, { alias: 'work' });
+    const older = await test.context.messages.enqueue({ destination: 'work', text: 'older' });
+    const newer = await test.context.messages.enqueue({ destination: 'work', text: 'newer' });
+    const dryRun = new DryRunTransport();
+    expect(await worker(test, dryRun).processOnce({ reference: newer.job.uuid })).toBe(true);
+    expect(test.context.jobs.get(newer.job.uuid)?.status).toBe('DRY_RUN');
+    expect(test.context.jobs.get(older.job.uuid)?.status).toBe('PENDING');
+    expect(dryRun.sendCalls).toEqual([newer.job.uuid]);
+  });
+
+  it('never falls back to another job when the referenced job is ineligible', async () => {
+    test = makeTestContext({ dryRun: true });
+    addAllowedGroup(test.context, { alias: 'work' });
+    const queued = await test.context.messages.enqueue({ destination: 'work', text: 'queued' });
+    const dryRun = new DryRunTransport();
+    expect(await worker(test, dryRun).processOnce({ reference: 'not-a-real-job' })).toBe(false);
+    expect(test.context.jobs.get(queued.job.uuid)?.status).toBe('PENDING');
+    expect(dryRun.sendCalls).toEqual([]);
+  });
+
+  it('simulates a scheduled dry-run job even when the worker uses a live transport', async () => {
+    test = makeTestContext();
+    addAllowedGroup(test.context, { alias: 'work' });
+    const scheduledAt = new Date(Date.now() + 60_000);
+    const created = await test.context.messages.enqueue({
+      destination: 'work',
+      text: 'scheduled dry run',
+      scheduledAt,
+      dryRun: true,
+    });
+    const live = new FakeTransport();
+    const queueWorker = worker(test, live, { now: () => new Date(scheduledAt.valueOf() + 1) });
+
+    expect(await queueWorker.processOnce()).toBe(true);
+    expect(test.context.jobs.get(created.job.uuid)?.status).toBe('DRY_RUN');
+    expect(live.sendCalls).toEqual([]);
+  });
+
+  it('leaves live backlog untouched when a dry-run daemon starts', async () => {
+    test = makeTestContext({ dryRun: true });
+    addAllowedGroup(test.context, { alias: 'work' });
+    const created = await test.context.messages.enqueue({
+      destination: 'work',
+      text: 'live backlog',
+      dryRun: false,
+    });
+    const dryRun = new DryRunTransport();
+
+    expect(await worker(test, dryRun).processOnce()).toBe(false);
+    expect(test.context.jobs.get(created.job.uuid)?.status).toBe('PENDING');
+    expect(dryRun.sendCalls).toEqual([]);
+  });
 });

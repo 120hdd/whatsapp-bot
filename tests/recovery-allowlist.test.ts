@@ -62,4 +62,33 @@ describe('crash recovery and allowlist invariants', () => {
       }),
     ).rejects.toThrow('not allowlisted');
   });
+
+  it('cancels queued work when a refresh finds the group cannot send', async () => {
+    test = makeTestContext();
+    addAllowedGroup(test.context);
+    const queued = await test.context.messages.enqueue({
+      destination: '120363000000000000@g.us',
+      text: 'queued before permission change',
+    });
+
+    test.context.destinations.synchronize([
+      { jid: '120363000000000000@g.us', subject: 'Test group', canSend: false },
+    ]);
+
+    expect(test.context.jobs.get(queued.job.uuid)?.status).toBe('CANCELLED');
+    expect(test.context.jobs.get(queued.job.uuid)?.lastErrorClass).toBe('DESTINATION_ERROR');
+  });
+
+  it('cancels other queued work after a delivery permission error', async () => {
+    test = makeTestContext();
+    addAllowedGroup(test.context);
+    const queued = await test.context.messages.enqueue({
+      destination: '120363000000000000@g.us',
+      text: 'still queued',
+    });
+
+    test.context.destinations.setCanSend('120363000000000000@g.us', false);
+
+    expect(test.context.jobs.get(queued.job.uuid)?.status).toBe('CANCELLED');
+  });
 });

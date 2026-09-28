@@ -209,7 +209,7 @@ npm run dev -- --dry-run send dry-run-test --text "SajadBot WhatsApp dry-run tes
 npm run dev -- --dry-run send dry-run-test --file ./tests/fixtures/image.jpg --caption "media dry-run"
 ```
 
-Validation, allowlist resolution, media staging, hashing, idempotency, queue claiming, state transitions, audit, and logging all run. The terminal state is `DRY_RUN` with an unmistakable `dryrun:<job-id>` non-real identifier. No Baileys socket is required or constructed. Scheduled dry-runs are processed by a daemon started with `DRY_RUN=true` when they become due.
+Validation, allowlist resolution, media staging, hashing, idempotency, queue claiming, state transitions, audit, and logging all run. The terminal state is `DRY_RUN` with an unmistakable `dryrun:<job-id>` non-real identifier. No Baileys socket is required or constructed. Dry-run intent is stored with each job: scheduled dry-runs are simulated when due even if a live daemon is running, and a dry-run daemon leaves live queued work untouched.
 
 Run the reproducible smoke checks:
 

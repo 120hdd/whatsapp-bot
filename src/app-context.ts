@@ -18,8 +18,13 @@ import { BulkMessageService } from './messaging/bulk-message-service.js';
 
 export function createAppContext(config: AppConfig) {
   const database = new Database(config.databasePath);
-  database.open();
-  database.migrate();
+  try {
+    database.open();
+    database.migrate();
+  } catch (error) {
+    database.close();
+    throw error;
+  }
   const audit = new AuditRepository(database);
   const auth = new AuthRepository(database);
   const batches = new BatchRepository(database);

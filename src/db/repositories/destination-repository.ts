@@ -71,6 +71,17 @@ export class DestinationRepository {
           now,
         );
       }
+      db.prepare(
+        `UPDATE message_jobs
+         SET status = 'CANCELLED', updated_at = ?,
+           last_error_class = 'DESTINATION_ERROR',
+           last_error_message = 'Destination no longer allows sending'
+         WHERE status IN ('PENDING','SCHEDULED','RETRY','WAITING_RATE_LIMIT')
+           AND EXISTS (
+             SELECT 1 FROM destinations d
+             WHERE d.jid = message_jobs.destination_jid AND d.can_send = 0
+           )`,
+      ).run(now);
       insertAudit(db, 'group_refresh', {
         actor,
         entityType: 'destination',
@@ -165,9 +176,24 @@ export class DestinationRepository {
   }
 
   public setCanSend(jid: string, canSend: boolean): void {
-    this.database
-      .requireConnection()
-      .prepare('UPDATE destinations SET can_send = ?, updated_at = ? WHERE jid = ?')
-      .run(canSend ? 1 : 0, new Date().toISOString(), jid);
+    const now = new Date().toISOString();
+    this.database.immediateTransaction(() => {
+      const db = this.database.requireConnection();
+      db.prepare('UPDATE destinations SET can_send = ?, updated_at = ? WHERE jid = ?').run(
+        canSend ? 1 : 0,
+        now,
+        jid,
+      );
+      if (!canSend) {
+        db.prepare(
+          `UPDATE message_jobs
+           SET status = 'CANCELLED', updated_at = ?,
+             last_error_class = 'DESTINATION_ERROR',
+             last_error_message = 'Destination no longer allows sending'
+           WHERE destination_jid = ?
+             AND status IN ('PENDING','SCHEDULED','RETRY','WAITING_RATE_LIMIT')`,
+        ).run(now, jid);
+      }
+    });
   }
 }

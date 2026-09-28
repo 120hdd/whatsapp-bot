@@ -103,7 +103,6 @@ try {
       duplicateSuppressed: true,
       forceCreatedSecondJob: true,
       jobs: jobs.map((job) => ({ id: job.uuid, state: job.status, remoteId: job.remoteMessageId })),
-      baileysSendMessageCalls: 0,
       authRequired: false,
     }, null, 2)}\n`,
   );

@@ -19,6 +19,20 @@ describe('durable queue repository', () => {
     expect(test.context.jobs.transition(result.job.uuid, 'SENT').status).toBe('SENT');
   });
 
+  it('claims a named job without consuming older pending work', async () => {
+    test = makeTestContext();
+    addAllowedGroup(test.context, { alias: 'work' });
+    const older = await test.context.messages.enqueue({ destination: 'work', text: 'older' });
+    const newer = await test.context.messages.enqueue({ destination: 'work', text: 'newer' });
+    const claimed = test.context.jobs.claimJob(new Date().toISOString(), newer.job.uuid);
+    expect(claimed?.uuid).toBe(newer.job.uuid);
+    expect(claimed?.attemptCount).toBe(1);
+    expect(test.context.jobs.get(older.job.uuid)?.status).toBe('PENDING');
+    expect(test.context.jobs.claimJob(new Date().toISOString(), older.job.uuid)?.uuid).toBe(
+      older.job.uuid,
+    );
+  });
+
   it('does not claim scheduled work before it is due', async () => {
     test = makeTestContext();
     addAllowedGroup(test.context);

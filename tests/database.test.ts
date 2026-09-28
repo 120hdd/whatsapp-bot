@@ -73,9 +73,12 @@ describe('database and migrations', () => {
 
       const context = createAppContext(testConfig(root));
       try {
-        expect(context.database.getSchemaVersion()).toBe(3);
+        expect(context.database.getSchemaVersion()).toBe(migrations.at(-1)?.version);
         expect(context.destinations.resolve('120363000000000099@g.us')?.subject).toBe('Preserved');
         expect(context.groupSets.list()).toEqual([]);
+        expect(
+          context.database.requireConnection().prepare("PRAGMA table_info(message_jobs)").all(),
+        ).toEqual(expect.arrayContaining([expect.objectContaining({ name: 'dry_run' })]));
       } finally {
         context.close();
       }

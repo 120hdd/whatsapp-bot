@@ -37,6 +37,7 @@ interface JobRow {
   sent_at: string | null;
   remote_message_id: string | null;
   batch_id: string | null;
+  dry_run: number;
 }
 
 function toJob(row: JobRow): QueueJob {
@@ -66,6 +67,7 @@ function toJob(row: JobRow): QueueJob {
     sentAt: row.sent_at,
     remoteMessageId: row.remote_message_id,
     batchId: row.batch_id,
+    dryRun: row.dry_run === 1,
   };
 }
 
@@ -91,8 +93,8 @@ export class JobRepository {
           `INSERT INTO message_jobs(
             uuid, destination_jid, payload_type, text, media_path, media_hash, media_mime,
             filename, scheduled_at, status, max_attempts, idempotency_key, options_json,
-            requested_by, batch_id, created_at, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            requested_by, batch_id, dry_run, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         ).run(
           job.uuid,
           job.destinationJid,
@@ -109,6 +111,7 @@ export class JobRepository {
           job.optionsJson,
           job.requestedBy,
           job.batchId,
+          job.dryRun ? 1 : 0,
           now,
           now,
         );
@@ -194,18 +197,28 @@ export class JobRepository {
           `UPDATE message_jobs
            SET status = 'CANCELLED', updated_at = ?,
              last_error_class = 'DESTINATION_ERROR',
-             last_error_message = 'Destination is not allowlisted'
+             last_error_message = 'Destination is disabled or no longer allows sending'
            WHERE status IN ('PENDING','SCHEDULED','RETRY','WAITING_RATE_LIMIT')
              AND EXISTS (
                SELECT 1 FROM destinations d
-               WHERE d.jid = message_jobs.destination_jid AND d.enabled = 0
+               WHERE d.jid = message_jobs.destination_jid
+                 AND (d.enabled = 0 OR d.can_send = 0)
              )`,
         )
         .run(now).changes,
     );
   }
 
-  public claimNext(now: string): QueueJob | null {
+  public claimNext(now: string, dryRunOnly = false): QueueJob | null {
+    return this.claim(now, undefined, dryRunOnly);
+  }
+
+  /** Claims one named job when it is eligible, leaving every other queued job untouched. */
+  public claimJob(now: string, reference: string, dryRunOnly = false): QueueJob | null {
+    return this.claim(now, reference, dryRunOnly);
+  }
+
+  private claim(now: string, reference?: string, dryRunOnly = false): QueueJob | null {
     return this.database.immediateTransaction(() => {
       const db = this.database.requireConnection();
       const row = db
@@ -217,11 +230,11 @@ export class JobRepository {
                j.status = 'PENDING'
                OR (j.status IN ('RETRY','WAITING_RATE_LIMIT')
                  AND j.next_attempt_at IS NOT NULL AND j.next_attempt_at <= ?)
-             )
+             )${dryRunOnly ? ' AND j.dry_run = 1' : ''}${reference ? ' AND (j.uuid = ? OR CAST(j.id AS TEXT) = ?)' : ''}
            ORDER BY COALESCE(j.next_attempt_at, j.scheduled_at), j.id
            LIMIT 1`,
         )
-        .get(now) as JobRow | undefined;
+        .get(now, ...(reference ? [reference, reference] : [])) as JobRow | undefined;
       if (!row) return null;
       assertJobTransition(row.status, 'PROCESSING');
       const result = db
