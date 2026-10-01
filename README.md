@@ -247,6 +247,21 @@ accepted for 24 hours after receipt; if the reference expires or WhatsApp reject
 fails and the source must be forwarded into Message Yourself again. View-once and other special
 message types are outside this first release.
 
+The terminal offers the same destination choices. Keep the daemon's Message Yourself controller
+enabled to capture forwarded sources, then list their IDs and queue one explicitly:
+
+```bash
+wts forwardsources
+wts forward family --source SOURCE_MESSAGE_ID
+wts forwardmulti family,work --source SOURCE_MESSAGE_ID
+wts forwardset customers --source SOURCE_MESSAGE_ID
+wts forwardall --source SOURCE_MESSAGE_ID
+```
+
+Use `--at 2030-01-01T10:00:00Z` on any forward command to schedule it. A full source key from
+`forwardsources` also works with `--source` when a message ID is ambiguous. The CLI checks media
+expiry before queueing; the worker checks it again before delivery.
+
 `/sendmulti` atomically validates every explicitly selected alias or group JID before it queues anything. An unknown, malformed, non-group, disabled, or unsendable target aborts the command. `/sendall` snapshots all currently known groups and queues only those currently allowed and sendable. Duplicate target JIDs and existing idempotent jobs are summarized instead of producing one chat reply per destination.
 
 Persistent group sets:

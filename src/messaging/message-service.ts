@@ -45,6 +45,7 @@ export class MessageService {
   public async enqueueForward(request: {
     destination: string;
     sourceKey: string;
+    scheduledAt?: Date;
     actor?: string;
     batchId?: string;
   }): Promise<QueueMessageResult> {
@@ -53,6 +54,10 @@ export class MessageService {
     if (!destination.enabled || !destination.canSend) {
       throw new Error(`Destination "${destination.subject}" is not allowed to receive messages`);
     }
+    const now = new Date();
+    if (request.scheduledAt && request.scheduledAt.valueOf() <= now.valueOf()) {
+      throw new Error('Scheduled delivery must be in the future');
+    }
     const uuid = randomUUID();
     const dryRun = this.config.dryRun;
     const idempotencyKey = buildIdempotencyKey({
@@ -60,7 +65,7 @@ export class MessageService {
       payloadType: 'text',
       text: '',
       mediaHash: null,
-      scheduleIdentity: 'IMMEDIATE',
+      scheduleIdentity: request.scheduledAt?.toISOString() ?? 'IMMEDIATE',
       filename: null,
       options: { forwardSourceKey: request.sourceKey },
       dryRun,
@@ -75,8 +80,8 @@ export class MessageService {
         mediaHash: null,
         mediaMime: null,
         filename: null,
-        scheduledAt: new Date().toISOString(),
-        status: 'PENDING',
+        scheduledAt: request.scheduledAt?.toISOString() ?? now.toISOString(),
+        status: request.scheduledAt ? 'SCHEDULED' : 'PENDING',
         maxAttempts: this.config.maxAttempts,
         idempotencyKey,
         optionsJson: '{}',

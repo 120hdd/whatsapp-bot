@@ -12,6 +12,7 @@ export interface BulkEnqueueRequest {
   destinations: readonly Destination[];
   text?: string;
   forwardSourceKey?: string;
+  scheduledAt?: Date;
   force?: boolean;
   actor?: string;
   requestedCount?: number;
@@ -49,6 +50,7 @@ export class BulkMessageService {
           ? await this.messages.enqueueForward({
             destination: destination.jid,
             sourceKey: request.forwardSourceKey,
+            ...(request.scheduledAt ? { scheduledAt: request.scheduledAt } : {}),
             actor: request.actor ?? 'self-controller',
             batchId,
           })

@@ -7,6 +7,7 @@ import { ensureApplicationDirectories, loadConfig } from '../config/load.js';
 import type { AppConfig } from '../config/schema.js';
 import { runDaemon } from '../daemon.js';
 import { normalizeGroupSetName } from '../domain/group-sets.js';
+import type { Destination } from '../domain/groups.js';
 import { ProcessLock } from '../lock/process-lock.js';
 import { DryRunTransport } from '../messaging/dry-run-transport.js';
 import { QueueWorker } from '../messaging/queue-worker.js';
@@ -93,6 +94,86 @@ function requireGroupSet(context: AppContext, name: string) {
   const groupSet = context.groupSets.get(name);
   if (!groupSet) throw new Error(`Group set not found: ${name}`);
   return groupSet;
+}
+
+function requireForwardSource(context: AppContext, reference: string, scheduledAt?: Date): string {
+  const source = context.forwardSources.resolve(reference);
+  if (!source) {
+    throw new Error('Forward source is not stored. Use `wts forwardsources` and forward it into Message Yourself again if needed.');
+  }
+  const deliveryTime = scheduledAt?.valueOf() ?? Date.now();
+  if (source.expiresAt && deliveryTime >= Date.parse(source.expiresAt)) {
+    throw new Error('Forward source media expires before delivery. Forward it into Message Yourself again.');
+  }
+  return source.sourceKey;
+}
+
+async function queueCliForwardBulk(options: {
+  mode: 'forwardall' | 'forwardmulti' | 'forwardset';
+  source: string;
+  at?: string;
+  targets?: string[];
+  name?: string;
+}): Promise<void> {
+  await withContext(async (context) => {
+    const scheduledAt = options.at ? parseSchedule(options.at) : undefined;
+    const sourceKey = requireForwardSource(context, options.source, scheduledAt);
+    const resolver = new TargetResolver(context.destinations);
+    let destinations: Destination[];
+    let requested: number;
+    let duplicateTargets: number;
+    let skipped: number;
+    let type: 'sendall' | 'sendmulti' | 'sendset';
+    if (options.mode === 'forwardall') {
+      const snapshot = resolver.snapshotAllowed();
+      destinations = snapshot.destinations;
+      requested = snapshot.requested;
+      duplicateTargets = snapshot.duplicates;
+      skipped = snapshot.skipped;
+      type = 'sendall';
+    } else if (options.mode === 'forwardmulti') {
+      const inputs = targetInputs(options.targets ?? []);
+      if (!inputs.length) throw new Error('At least one group target is required');
+      const resolved = resolver.resolveTargets(inputs, true);
+      if (resolved.issues.length) {
+        throw new Error(`Multi-forward aborted; invalid targets: ${targetIssueMessage(resolved.issues)}`);
+      }
+      destinations = resolved.destinations;
+      requested = inputs.length;
+      duplicateTargets = resolved.duplicates;
+      skipped = 0;
+      type = 'sendmulti';
+    } else {
+      const name = requireGroupSetName(options.name ?? '');
+      const members = context.groupSets.members(name);
+      if (!members) throw new Error(`Group set not found: ${name}`);
+      const present = members.filter((member) => member.destination !== null);
+      const resolved = resolver.resolveTargets(present.map((member) => member.jid), true);
+      destinations = resolved.destinations;
+      requested = members.length;
+      duplicateTargets = resolved.duplicates;
+      skipped = members.length - destinations.length - duplicateTargets;
+      type = 'sendset';
+    }
+    if (!destinations.length) {
+      output({ source: sourceKey, targets: requested, queued: 0, skipped, failed: 0 });
+      return;
+    }
+    const result = await context.bulkMessages.enqueue({
+      type,
+      destinations,
+      forwardSourceKey: sourceKey,
+      ...(scheduledAt ? { scheduledAt } : {}),
+      actor: 'cli',
+      requestedCount: requested,
+      duplicateTargets,
+      skipped,
+    });
+    bulkOutput(result, {
+      source: sourceKey,
+      skipped: skipped + result.duplicateJobs + result.duplicateTargets,
+    });
+  });
 }
 
 function bulkOutput(
@@ -536,6 +617,78 @@ program
       });
     });
   });
+
+program
+  .command('forwardsources')
+  .description('List recently stored Message Yourself forward sources without message content')
+  .option('--limit <count>', 'maximum rows', '20')
+  .action(async (options: { limit: string }) => {
+    await withContext((context) => {
+      const limit = Number(options.limit);
+      if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+        throw new Error('Limit must be between 1 and 100');
+      }
+      output(context.forwardSources.list(limit));
+    });
+  });
+
+program
+  .command('forward <destination>')
+  .description('Queue native forwarding of a stored Message Yourself source to one allowed group')
+  .requiredOption('--source <message-id-or-key>')
+  .option('--at <timestamp>', 'scheduled delivery with an explicit offset')
+  .action(async (destination: string, options: { source: string; at?: string }) => {
+    await withContext(async (context) => {
+      const scheduledAt = options.at ? parseSchedule(options.at) : undefined;
+      const sourceKey = requireForwardSource(context, options.source, scheduledAt);
+      const result = await context.messages.enqueueForward({
+        destination, sourceKey,
+        ...(scheduledAt ? { scheduledAt } : {}),
+        actor: 'cli',
+      });
+      if (!result.duplicate && context.config.dryRun && result.job.status === 'PENDING') {
+        const worker = new QueueWorker(
+          context.jobs, context.destinations, context.state, context.audit,
+          new DryRunTransport(), context.config, context.logger,
+        );
+        await worker.processOnce({ reference: result.job.uuid });
+      }
+      const current = context.jobs.get(result.job.uuid);
+      output({
+        source: sourceKey,
+        queued: result.duplicate ? 0 : 1,
+        duplicates: result.duplicate ? 1 : 0,
+        skipped: result.duplicate ? 1 : 0,
+        failed: 0,
+        jobId: result.job.uuid,
+        status: current?.status ?? result.job.status,
+      });
+    });
+  });
+
+program
+  .command('forwardall')
+  .description('Queue native forwarding to every allowed group')
+  .requiredOption('--source <message-id-or-key>')
+  .option('--at <timestamp>', 'scheduled delivery with an explicit offset')
+  .action(async (options: { source: string; at?: string }) =>
+    queueCliForwardBulk({ mode: 'forwardall', ...options }));
+
+program
+  .command('forwardmulti <targets...>')
+  .description('Queue native forwarding to selected allowed groups')
+  .requiredOption('--source <message-id-or-key>')
+  .option('--at <timestamp>', 'scheduled delivery with an explicit offset')
+  .action(async (targets: string[], options: { source: string; at?: string }) =>
+    queueCliForwardBulk({ mode: 'forwardmulti', targets, ...options }));
+
+program
+  .command('forwardset <name>')
+  .description('Queue native forwarding to eligible members of a Group Set')
+  .requiredOption('--source <message-id-or-key>')
+  .option('--at <timestamp>', 'scheduled delivery with an explicit offset')
+  .action(async (name: string, options: { source: string; at?: string }) =>
+    queueCliForwardBulk({ mode: 'forwardset', name, ...options }));
 
 program.command('batch <id>').description('Show persisted status counts for a bulk-send batch').action(async (id: string) => {
   await withContext((context) => {
