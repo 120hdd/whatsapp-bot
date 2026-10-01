@@ -158,4 +158,19 @@ export const migrations: readonly Migration[] = [
         ADD COLUMN dry_run INTEGER NOT NULL DEFAULT 0 CHECK (dry_run IN (0, 1));
     `,
   },
+  {
+    version: 5,
+    name: 'forward_sources',
+    sql: `
+      CREATE TABLE forward_sources (
+        source_key TEXT PRIMARY KEY,
+        payload BLOB NOT NULL,
+        content_type TEXT NOT NULL,
+        received_at TEXT NOT NULL,
+        expires_at TEXT
+      );
+      ALTER TABLE message_jobs ADD COLUMN forward_source_key TEXT;
+      CREATE INDEX ix_jobs_forward_source ON message_jobs(forward_source_key);
+    `,
+  },
 ] as const;

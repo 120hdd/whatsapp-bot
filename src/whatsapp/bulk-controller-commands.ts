@@ -57,6 +57,56 @@ export class BulkControllerCommands {
     this.targets = new TargetResolver(context.destinations);
   }
 
+  public async forwardMulti(expression: string, sourceKey: string): Promise<string> {
+    const inputs = expression.split(',').map((value) => value.trim());
+    if (inputs.length < 2 || inputs.some((value) => !value)) {
+      return 'Usage: /forwardmulti GROUP1,GROUP2';
+    }
+    const resolved = this.targets.resolveTargets(inputs, true);
+    if (resolved.issues.length) return invalidTargets(resolved.issues);
+    const result = await this.context.bulkMessages.enqueue({
+      type: 'sendmulti', destinations: resolved.destinations,
+      forwardSourceKey: sourceKey, actor: 'self-controller',
+      requestedCount: inputs.length, duplicateTargets: resolved.duplicates,
+    });
+    return bulkLines('Forward queued', result, [`Skipped: ${resolved.duplicates + result.duplicateJobs}`]);
+  }
+
+  public async forwardAll(sourceKey: string): Promise<string> {
+    const snapshot = this.targets.snapshotAllowed();
+    if (!snapshot.destinations.length) return 'No allowed groups.\nQueued: 0\nSkipped: 0\nFailed: 0';
+    const result = await this.context.bulkMessages.enqueue({
+      type: 'sendall', destinations: snapshot.destinations,
+      forwardSourceKey: sourceKey, actor: 'self-controller',
+      requestedCount: snapshot.requested, duplicateTargets: snapshot.duplicates,
+      skipped: snapshot.skipped,
+    });
+    return bulkLines('Forward queued', result, [
+      `Skipped: ${snapshot.skipped + snapshot.duplicates + result.duplicateJobs}`,
+    ]);
+  }
+
+  public async forwardSet(rawName: string, sourceKey: string): Promise<string> {
+    let name: string;
+    try { name = normalizeGroupSetName(rawName); }
+    catch { return 'Invalid group set name.'; }
+    const members = this.context.groupSets.members(name);
+    if (!members) return `Group set not found: ${name}`;
+    const present = members.filter((member) => member.destination !== null);
+    const resolved = this.targets.resolveTargets(present.map((member) => member.jid), true);
+    const skipped = members.length - resolved.destinations.length - resolved.duplicates;
+    if (!resolved.destinations.length) return 'No eligible groups.\nQueued: 0\nSkipped: 0\nFailed: 0';
+    const result = await this.context.bulkMessages.enqueue({
+      type: 'sendset', destinations: resolved.destinations,
+      forwardSourceKey: sourceKey, actor: 'self-controller',
+      requestedCount: members.length, duplicateTargets: resolved.duplicates,
+      skipped,
+    });
+    return bulkLines('Forward queued', result, [
+      `Skipped: ${skipped + resolved.duplicates + result.duplicateJobs}`,
+    ]);
+  }
+
   public async sendMulti(command: string): Promise<string> {
     const parsed = multiMessage(command);
     if (!parsed) return '❌ Usage: /sendmulti TARGET1,TARGET2 MESSAGE';

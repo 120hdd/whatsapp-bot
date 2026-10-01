@@ -2,6 +2,7 @@ export { AuditRepository } from './audit-repository.js';
 export { AuthRepository } from './auth-repository.js';
 export { BatchRepository } from './batch-repository.js';
 export { ControllerRepository } from './controller-repository.js';
+export { ForwardSourceRepository } from './forward-source-repository.js';
 export { DestinationRepository } from './destination-repository.js';
 export { GroupSetRepository } from './group-set-repository.js';
 export { JobRepository } from './job-repository.js';

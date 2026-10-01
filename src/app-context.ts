@@ -5,6 +5,7 @@ import {
   AuthRepository,
   BatchRepository,
   ControllerRepository,
+  ForwardSourceRepository,
   DestinationRepository,
   GroupSetRepository,
   JobRepository,
@@ -29,6 +30,7 @@ export function createAppContext(config: AppConfig) {
   const auth = new AuthRepository(database);
   const batches = new BatchRepository(database);
   const controller = new ControllerRepository(database);
+  const forwardSources = new ForwardSourceRepository(database);
   const destinations = new DestinationRepository(database);
   const groupSets = new GroupSetRepository(database);
   const jobs = new JobRepository(database);
@@ -45,6 +47,7 @@ export function createAppContext(config: AppConfig) {
     auth,
     batches,
     controller,
+    forwardSources,
     destinations,
     groupSets,
     jobs,

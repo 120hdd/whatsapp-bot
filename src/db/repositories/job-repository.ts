@@ -38,6 +38,7 @@ interface JobRow {
   remote_message_id: string | null;
   batch_id: string | null;
   dry_run: number;
+  forward_source_key: string | null;
 }
 
 function toJob(row: JobRow): QueueJob {
@@ -68,6 +69,7 @@ function toJob(row: JobRow): QueueJob {
     remoteMessageId: row.remote_message_id,
     batchId: row.batch_id,
     dryRun: row.dry_run === 1,
+    forwardSourceKey: row.forward_source_key,
   };
 }
 
@@ -93,8 +95,8 @@ export class JobRepository {
           `INSERT INTO message_jobs(
             uuid, destination_jid, payload_type, text, media_path, media_hash, media_mime,
             filename, scheduled_at, status, max_attempts, idempotency_key, options_json,
-            requested_by, batch_id, dry_run, created_at, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            requested_by, batch_id, dry_run, forward_source_key, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         ).run(
           job.uuid,
           job.destinationJid,
@@ -112,6 +114,7 @@ export class JobRepository {
           job.requestedBy,
           job.batchId,
           job.dryRun ? 1 : 0,
+          job.forwardSourceKey ?? null,
           now,
           now,
         );

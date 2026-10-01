@@ -42,6 +42,59 @@ export class MessageService {
     this.stager = new MediaStager(config.mediaDir, config.maxMediaBytes);
   }
 
+  public async enqueueForward(request: {
+    destination: string;
+    sourceKey: string;
+    actor?: string;
+    batchId?: string;
+  }): Promise<QueueMessageResult> {
+    const destination = this.destinations.resolve(request.destination);
+    if (!destination) throw new NotFoundError(`Unknown destination: ${request.destination}`);
+    if (!destination.enabled || !destination.canSend) {
+      throw new Error(`Destination "${destination.subject}" is not allowed to receive messages`);
+    }
+    const uuid = randomUUID();
+    const dryRun = this.config.dryRun;
+    const idempotencyKey = buildIdempotencyKey({
+      destinationJid: destination.jid,
+      payloadType: 'text',
+      text: '',
+      mediaHash: null,
+      scheduleIdentity: 'IMMEDIATE',
+      filename: null,
+      options: { forwardSourceKey: request.sourceKey },
+      dryRun,
+    });
+    try {
+      const job = this.jobs.create({
+        uuid,
+        destinationJid: destination.jid,
+        payloadType: 'text',
+        text: null,
+        mediaPath: null,
+        mediaHash: null,
+        mediaMime: null,
+        filename: null,
+        scheduledAt: new Date().toISOString(),
+        status: 'PENDING',
+        maxAttempts: this.config.maxAttempts,
+        idempotencyKey,
+        optionsJson: '{}',
+        requestedBy: request.actor ?? 'self-controller',
+        batchId: request.batchId ?? null,
+        dryRun,
+        forwardSourceKey: request.sourceKey,
+      }, request.actor ?? 'self-controller');
+      return { job, duplicate: false };
+    } catch (error) {
+      if (error instanceof DuplicateJobError) {
+        const existing = this.jobs.get(error.existingId);
+        if (existing) return { job: existing, duplicate: true };
+      }
+      throw error;
+    }
+  }
+
   public async enqueue(request: QueueMessageRequest): Promise<QueueMessageResult> {
     const destination = this.destinations.resolve(request.destination);
     if (!destination) {

@@ -74,7 +74,7 @@ export async function runDaemon(config: AppConfig): Promise<DaemonExit> {
       } catch (error) {
         context.logger.warn({ err: error }, 'group_refresh_failed_existing_cache_preserved');
       }
-      transport = new BaileysTransport(() => connection?.currentSocket ?? null);
+      transport = new BaileysTransport(() => connection?.currentSocket ?? null, context.forwardSources);
       if (config.selfControllerEnabled) {
         const ownJids = [context.state.get('own_jid'), context.state.get('own_lid')].filter(
           (value): value is string => Boolean(value),
@@ -84,6 +84,7 @@ export async function runDaemon(config: AppConfig): Promise<DaemonExit> {
           context.controller,
           createControllerExecutor(context, groups),
           context.logger,
+          context.forwardSources,
         );
         controller = selfController;
         // Reconnects replace the socket object, so the controller has to be

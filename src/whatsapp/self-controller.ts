@@ -1,12 +1,32 @@
 import { createHash } from 'node:crypto';
 
-import type { WAMessage, WASocket } from '@whiskeysockets/baileys';
+import { proto, type WAMessage, type WASocket } from '@whiskeysockets/baileys';
 import type { Logger } from 'pino';
 
 import type { ControllerRepository } from '../db/repositories/index.js';
+import type { ForwardSourceRepository } from '../db/repositories/forward-source-repository.js';
 import { isUserJid, sameJid } from './jid.js';
 
-export type ControllerExecutor = (command: string) => Promise<string>;
+export type ControllerExecutor = (command: string, sourceKey?: string) => Promise<string>;
+
+export function forwardSourceKey(jid: string, id: string): string {
+  return `${jid}|${id}`;
+}
+
+function forwardContentType(message: WAMessage): 'text' | 'image' | 'video' | 'document' | null {
+  const content = message.message;
+  if (content?.extendedTextMessage?.text || content?.conversation) return 'text';
+  if (content?.imageMessage) return 'image';
+  if (content?.videoMessage) return 'video';
+  if (content?.documentMessage) return 'document';
+  return null;
+}
+
+function contextInfo(message: WAMessage) {
+  const content = message.message;
+  return content?.extendedTextMessage?.contextInfo ?? content?.imageMessage?.contextInfo ??
+    content?.videoMessage?.contextInfo ?? content?.documentMessage?.contextInfo;
+}
 
 function messageText(message: WAMessage): string | null {
   return (
@@ -17,7 +37,7 @@ function messageText(message: WAMessage): string | null {
 }
 
 function isForwarded(message: WAMessage): boolean {
-  const context = message.message?.extendedTextMessage?.contextInfo;
+  const context = contextInfo(message);
   return context?.isForwarded === true || (context?.forwardingScore ?? 0) > 0;
 }
 
@@ -31,6 +51,7 @@ export class SelfChatController {
     private readonly repository: ControllerRepository,
     private readonly execute: ControllerExecutor,
     private readonly logger: Logger,
+    private readonly forwardSources?: ForwardSourceRepository,
   ) {}
 
   public get attached(): boolean {
@@ -85,6 +106,7 @@ export class SelfChatController {
       );
     }
     if (event.type !== 'notify' || event.requestId) return 0;
+    for (const message of event.messages) this.storeForwardSource(message);
     let accepted = 0;
     for (const message of event.messages) {
       if (!(await this.handleMessage(message))) continue;
@@ -114,7 +136,13 @@ export class SelfChatController {
     const commandHash = createHash('sha256').update(text).digest('hex');
     if (!this.repository.markProcessed(id, commandHash, new Date().toISOString())) return false;
     try {
-      const reply = await this.execute(text);
+      const isForwardCommand = /^\/forward(?:multi|set|all)?(?:\s|$)/i.test(text);
+      const quotedId = contextInfo(message)?.stanzaId;
+      const sourceKey = quotedId ? forwardSourceKey(message.key.remoteJid!, quotedId) : undefined;
+      const source = sourceKey ? this.forwardSources?.get(sourceKey) : null;
+      const reply = isForwardCommand && (!source || (source.expiresAt && Date.now() >= Date.parse(source.expiresAt)))
+        ? 'Forward source is missing or expired. Forward a text, photo, video, or document into Message Yourself again, then reply.'
+        : await this.execute(text, isForwardCommand ? sourceKey : undefined);
       await socket.sendMessage(message.key.remoteJid!, { text: reply });
     } catch (error) {
       this.logger.warn({ err: error, controller_message_id: id }, 'self_controller_command_failed');
@@ -127,5 +155,26 @@ export class SelfChatController {
       }
     }
     return true;
+  }
+
+  private storeForwardSource(message: WAMessage): void {
+    const jid = message.key.remoteJid;
+    const id = message.key.id;
+    if (!this.forwardSources || !jid || !id || !message.key.fromMe || !isUserJid(jid)) return;
+    if (!this.ownJids.some((own) => sameJid(own, jid))) return;
+    if (message.key.participant && !this.ownJids.some((own) => sameJid(own, message.key.participant))) return;
+    if (!isForwarded(message)) return;
+    const contentType = forwardContentType(message);
+    if (!contentType) return;
+    const receivedAt = new Date().toISOString();
+    // Media references can expire upstream. Never keep an unbounded media send promise.
+    const expiresAt = contentType === 'text' ? null : new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+    this.forwardSources.save({
+      sourceKey: forwardSourceKey(jid, id),
+      payload: Buffer.from(proto.WebMessageInfo.encode(message).finish()),
+      contentType,
+      receivedAt,
+      expiresAt,
+    });
   }
 }

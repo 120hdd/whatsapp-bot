@@ -231,6 +231,22 @@ Single and bulk sends:
 /sendall سلام
 ```
 
+Native forwarding from Message Yourself:
+
+```text
+1. Forward one text, photo, video, or document into Message Yourself.
+2. Reply to that message with /forward family, /forwardmulti family,work,
+   /forwardset customers, or /forwardall.
+3. Check the queued, skipped, and failed counts; use /batch BATCH_ID for later outcomes.
+```
+
+The source message is persisted in SQLite before a reply command can queue jobs, so a daemon
+restart does not erase its forwarding payload. Forwarded commands never execute. The worker uses
+Baileys native `{ forward: message }` and never silently copies content. Media references are
+accepted for 24 hours after receipt; if the reference expires or WhatsApp rejects it, the job
+fails and the source must be forwarded into Message Yourself again. View-once and other special
+message types are outside this first release.
+
 `/sendmulti` atomically validates every explicitly selected alias or group JID before it queues anything. An unknown, malformed, non-group, disabled, or unsendable target aborts the command. `/sendall` snapshots all currently known groups and queues only those currently allowed and sendable. Duplicate target JIDs and existing idempotent jobs are summarized instead of producing one chat reply per destination.
 
 Persistent group sets:

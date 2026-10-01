@@ -80,6 +80,11 @@ function helpText(): string {
     'ارسال اتمی به چند گروه مجاز مشخص.',
     '/sendall MESSAGE',
     'ارسال به همهٔ گروه‌های مجاز فعلی.',
+    '/forward GROUP',
+    '/forwardmulti GROUP1,GROUP2',
+    '/forwardset NAME',
+    '/forwardall',
+    'Reply to a forwarded text, photo, video, or document in Message Yourself. Only a fresh command queues delivery.',
     '/groupset create NAME',
     '/groupset add NAME TARGET...',
     '/groupset remove NAME TARGET...',
@@ -107,20 +112,37 @@ function helpText(): string {
     'لغو یک پیام ارسال‌نشده با شناسهٔ صف.',
     'مثال: /cancel 550e8400-e29b-41d4-a716-446655440000',
     '',
-    'نکته: ارسال از Message Yourself فعلاً فقط پیام متنی را پشتیبانی می‌کند.',
+    'Forwarded media references expire after 24 hours. Check /batch for delivery results.',
   ].join('\n');
 }
 
 export function createControllerExecutor(
   context: AppContext,
   groups: WhatsAppGroupService,
-): (command: string) => Promise<string> {
+): (command: string, sourceKey?: string) => Promise<string> {
   const bulk = new BulkControllerCommands(context);
   const groupSets = new GroupSetCommands(context);
-  return async (command: string): Promise<string> => {
+  return async (command: string, sourceKey?: string): Promise<string> => {
     const trimmed = command.trim();
     const [head, ...rest] = trimmed.split(/\s+/);
     try {
+      if (head && ['/forward', '/forwardmulti', '/forwardset', '/forwardall'].includes(head)) {
+        if (!sourceKey) return 'Reply to a forwarded message in Message Yourself.';
+        if (head === '/forward' && rest.length === 1) {
+          const result = await context.messages.enqueueForward({
+            destination: rest[0]!, sourceKey, actor: 'self-controller',
+          });
+          return `Queued: ${result.duplicate ? 0 : 1}\nSkipped: ${result.duplicate ? 1 : 0}\nFailed: 0\nJob: ${result.job.uuid}`;
+        }
+        if (head === '/forwardmulti' && rest.length === 1) {
+          return bulk.forwardMulti(rest[0]!, sourceKey);
+        }
+        if (head === '/forwardset' && rest.length === 1) {
+          return bulk.forwardSet(rest[0]!, sourceKey);
+        }
+        if (head === '/forwardall' && rest.length === 0) return bulk.forwardAll(sourceKey);
+        return 'Usage: /forward GROUP, /forwardmulti GROUP1,GROUP2, /forwardset NAME, or /forwardall';
+      }
       if (head === '/help') return helpText();
       if (head === '/status') return JSON.stringify(context.health.report(), null, 2);
       if (head === '/queue') return queueLines(context, rest[0] === 'failed');
@@ -176,6 +198,9 @@ export function createControllerExecutor(
       return `فرمان شناخته نشد. برای دیدن راهنمای کامل /help را بفرستید.\n\n${helpText()}`;
     } catch (error) {
       context.logger.warn({ err: error, controller_command: head }, 'controller_command_failed');
+      if (head?.startsWith('/forward')) {
+        return 'Queued: 0\nSkipped: 0\nFailed: 1\nCheck destination eligibility and service logs.';
+      }
       return '❌ Command failed. Nothing further was queued. Check service logs for details.';
     }
   };

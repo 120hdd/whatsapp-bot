@@ -10,7 +10,8 @@ import type { MessageService } from './message-service.js';
 export interface BulkEnqueueRequest {
   type: BatchType;
   destinations: readonly Destination[];
-  text: string;
+  text?: string;
+  forwardSourceKey?: string;
   force?: boolean;
   actor?: string;
   requestedCount?: number;
@@ -44,13 +45,20 @@ export class BulkMessageService {
     let failed = 0;
     for (const destination of destinations) {
       try {
-        const result = await this.messages.enqueue({
-          destination: destination.jid,
-          text: request.text,
-          force: request.force ?? false,
-          actor: request.actor ?? 'self-controller',
-          batchId,
-        });
+        const result = request.forwardSourceKey
+          ? await this.messages.enqueueForward({
+            destination: destination.jid,
+            sourceKey: request.forwardSourceKey,
+            actor: request.actor ?? 'self-controller',
+            batchId,
+          })
+          : await this.messages.enqueue({
+            destination: destination.jid,
+            text: request.text ?? '',
+            force: request.force ?? false,
+            actor: request.actor ?? 'self-controller',
+            batchId,
+          });
         if (result.duplicate) duplicateJobs += 1;
         else queued += 1;
       } catch (error) {
